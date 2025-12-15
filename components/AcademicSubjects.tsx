@@ -6,6 +6,8 @@ import {
   PenSquare, Trash2, X, Microscope, Calculator, 
   Languages, Globe, Activity, GraduationCap, Users
 } from 'lucide-react';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ModalPortal';
 
 export const AcademicSubjects: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>(SUBJECTS_MOCK);
@@ -22,6 +24,9 @@ export const AcademicSubjects: React.FC = () => {
     department: 'General'
   };
   const [newSubject, setNewSubject] = useState<Partial<Subject>>(initialSubject);
+
+  // Ensure modal always appears in-frame on both desktop + mobile
+  useModalScrollLock(isModalOpen, { scrollToTopOnOpen: true });
 
   // --- Logic ---
   const filteredSubjects = subjects.filter(sub => {
@@ -133,7 +138,8 @@ export const AcademicSubjects: React.FC = () => {
 
       {/* Subjects Table */}
       <div className="bg-white rounded-[32px] shadow-sm overflow-hidden border border-slate-50">
-         <table className="w-full text-left">
+         <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+         <table className="w-full text-left min-w-[900px]">
             <thead className="bg-slate-50/50">
                <tr>
                   <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Code</th>
@@ -182,7 +188,7 @@ export const AcademicSubjects: React.FC = () => {
                         <span className="ml-2 text-xs text-slate-400 font-medium">{sub.periodsPerWeek} p/w</span>
                      </td>
                      <td className="px-8 py-5 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto">
                             <button 
                               onClick={() => {
                                 setModalMode('edit');
@@ -205,6 +211,7 @@ export const AcademicSubjects: React.FC = () => {
                ))}
             </tbody>
          </table>
+         </div>
          {filteredSubjects.length === 0 && (
             <div className="p-10 text-center text-slate-500">
                No subjects found matching your criteria.
@@ -260,104 +267,106 @@ export const AcademicSubjects: React.FC = () => {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl p-8 relative">
-               <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"><X size={20} /></button>
-               <h3 className="text-2xl font-bold text-slate-800 mb-6">{modalMode === 'edit' ? 'Edit Subject' : 'Add New Subject'}</h3>
-               
-               <form onSubmit={handleAddSubject} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Subject Code</label>
-                        <input 
-                           type="text" 
-                           placeholder="e.g. ENG-101"
-                           value={newSubject.code}
-                           onChange={e => setNewSubject({...newSubject, code: e.target.value})}
-                           className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Department</label>
-                        <input 
-                           type="text" 
-                           placeholder="e.g. Mathematics"
-                           value={newSubject.department}
-                           onChange={e => setNewSubject({...newSubject, department: e.target.value})}
-                           className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
-                        />
-                     </div>
-                  </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+              <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl p-8 relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
+                <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"><X size={20} /></button>
+                <h3 className="text-2xl font-bold text-slate-800 mb-6">{modalMode === 'edit' ? 'Edit Subject' : 'Add New Subject'}</h3>
+                
+                <form onSubmit={handleAddSubject} className="space-y-4 overflow-y-auto pn-modal-body">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Subject Code</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. ENG-101"
+                            value={newSubject.code}
+                            onChange={e => setNewSubject({...newSubject, code: e.target.value})}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Department</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Mathematics"
+                            value={newSubject.department}
+                            onChange={e => setNewSubject({...newSubject, department: e.target.value})}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                          />
+                      </div>
+                    </div>
 
-                  <div>
-                     <label className="block text-sm font-bold text-slate-700 mb-2">Subject Name (English)</label>
-                     <input 
-                        type="text" 
-                        placeholder="e.g. Advanced English"
-                        value={newSubject.nameEn}
-                        onChange={e => setNewSubject({...newSubject, nameEn: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
-                     />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Subject Name (English)</label>
+                      <input 
+                          type="text" 
+                          placeholder="e.g. Advanced English"
+                          value={newSubject.nameEn}
+                          onChange={e => setNewSubject({...newSubject, nameEn: e.target.value})}
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      />
+                    </div>
 
-                  <div>
-                     <label className="block text-sm font-bold text-slate-700 mb-2">Subject Name (Myanmar)</label>
-                     <input 
-                        type="text" 
-                        placeholder="e.g. အင်္ဂလိပ်စာ"
-                        value={newSubject.nameMm}
-                        onChange={e => setNewSubject({...newSubject, nameMm: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 font-burmese"
-                     />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Subject Name (Myanmar)</label>
+                      <input 
+                          type="text" 
+                          placeholder="e.g. အင်္ဂလိပ်စာ"
+                          value={newSubject.nameMm}
+                          onChange={e => setNewSubject({...newSubject, nameMm: e.target.value})}
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 font-burmese"
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Grade Level</label>
-                        <select 
-                           value={newSubject.gradeLevel}
-                           onChange={e => setNewSubject({...newSubject, gradeLevel: e.target.value})}
-                           className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                           <option>Grade 9</option>
-                           <option>Grade 10</option>
-                           <option>Grade 11</option>
-                           <option>All</option>
-                        </select>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Type</label>
-                        <select 
-                           value={newSubject.type}
-                           onChange={e => setNewSubject({...newSubject, type: e.target.value as any})}
-                           className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                           <option>Core</option>
-                           <option>Elective</option>
-                           <option>Activity</option>
-                        </select>
-                     </div>
-                  </div>
-                  
-                  <div>
-                     <label className="block text-sm font-bold text-slate-700 mb-2">Periods Per Week</label>
-                     <input 
-                        type="number" 
-                        value={newSubject.periodsPerWeek}
-                        onChange={e => setNewSubject({...newSubject, periodsPerWeek: parseInt(e.target.value)})}
-                        className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
-                     />
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Grade Level</label>
+                          <select 
+                            value={newSubject.gradeLevel}
+                            onChange={e => setNewSubject({...newSubject, gradeLevel: e.target.value})}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          >
+                            <option>Grade 9</option>
+                            <option>Grade 10</option>
+                            <option>Grade 11</option>
+                            <option>All</option>
+                          </select>
+                      </div>
+                      <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Type</label>
+                          <select 
+                            value={newSubject.type}
+                            onChange={e => setNewSubject({...newSubject, type: e.target.value as any})}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          >
+                            <option>Core</option>
+                            <option>Elective</option>
+                            <option>Activity</option>
+                          </select>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Periods Per Week</label>
+                      <input 
+                          type="number" 
+                          value={newSubject.periodsPerWeek}
+                          onChange={e => setNewSubject({...newSubject, periodsPerWeek: parseInt(e.target.value)})}
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      />
+                    </div>
 
-                  <button 
-                     type="submit" 
-                     className="w-full py-4 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-600/20 transition-all mt-4"
-                  >
-                     Save Subject
-                  </button>
-               </form>
-            </div>
-         </div>
+                    <button 
+                      type="submit" 
+                      className="w-full py-4 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-600/20 transition-all mt-4"
+                    >
+                      Save Subject
+                    </button>
+                </form>
+              </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );

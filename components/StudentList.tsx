@@ -519,39 +519,39 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
 
       {/* Bulk Actions Bar */}
       {selectedStudents.size > 0 && (
-        <div className="bg-brand-600 text-white p-4 rounded-2xl flex items-center justify-between animate-fade-in">
+        <div className="bg-brand-600 text-white p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between animate-fade-in">
           <div className="flex items-center gap-3">
             <span className="font-bold">{selectedStudents.size} student(s) selected</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto pn-btn-row">
             <button
               onClick={handleBulkExport}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Download size={16} />
               Export
             </button>
             <button
               onClick={() => handleBulkStatusChange('Active')}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors w-full sm:w-auto"
             >
               Mark Active
             </button>
             <button
               onClick={() => handleBulkStatusChange('Fees Due')}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors w-full sm:w-auto"
             >
               Mark Fees Due
             </button>
             <button
               onClick={handleBulkDelete}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold transition-colors"
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold transition-colors w-full sm:w-auto"
             >
               Delete
             </button>
             <button
               onClick={() => setSelectedStudents(new Set())}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors w-full sm:w-auto"
             >
               Clear
             </button>
@@ -565,15 +565,17 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
           <table className="w-full">
             <thead className="bg-slate-50/50">
               <tr>
-                <th className="px-8 py-6 text-left">
+                {/* Select column (sticky so it stays visible on mobile/tablet horizontal scroll) */}
+                <th className="sticky left-0 z-30 bg-slate-50/90 backdrop-blur px-4 sm:px-6 lg:px-8 py-6 text-center border-r border-slate-100 min-w-[64px] w-[64px]">
                   <button
                     onClick={handleSelectAll}
-                    className="flex items-center"
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-slate-100 transition-colors"
+                    aria-label={selectAll ? 'Unselect all students' : 'Select all students'}
                   >
                     {selectAll ? (
-                      <CheckSquare size={20} className="text-brand-600" />
+                      <CheckSquare size={24} className="text-brand-600" />
                     ) : (
-                      <Square size={20} className="text-slate-400" />
+                      <Square size={24} className="text-slate-500" />
                     )}
                   </button>
                 </th>
@@ -594,15 +596,17 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
                   onMouseEnter={() => setHoveredStudentId(student.id)}
                   onMouseLeave={() => setHoveredStudentId(null)}
                 >
-                  <td className="px-8 py-5 whitespace-nowrap">
+                  {/* Select column (sticky so it stays visible on mobile/tablet horizontal scroll) */}
+                  <td className="sticky left-0 z-20 bg-white px-4 sm:px-6 lg:px-8 py-5 whitespace-nowrap border-r border-slate-100 min-w-[64px] w-[64px] text-center">
                     <button
                       onClick={() => handleSelectStudent(student.id)}
-                      className="flex items-center"
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-slate-100 transition-colors"
+                      aria-label={selectedStudents.has(student.id) ? `Unselect ${student.nameEn}` : `Select ${student.nameEn}`}
                     >
                       {selectedStudents.has(student.id) ? (
-                        <CheckSquare size={20} className="text-brand-600" />
+                        <CheckSquare size={24} className="text-brand-600" />
                       ) : (
-                        <Square size={20} className="text-slate-400 hover:text-brand-600" />
+                        <Square size={24} className="text-slate-500 hover:text-brand-600" />
                       )}
                     </button>
                   </td>
@@ -829,24 +833,30 @@ const StudentModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-[24px] w-full max-w-3xl shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"
-        >
-          <X size={18} />
-        </button>
+      <div className="bg-white rounded-[24px] w-full max-w-3xl shadow-2xl relative max-h-[90vh] overflow-hidden pn-modal-panel">
+        {/* Header (keeps close button always visible) */}
+        <div className="flex items-start justify-between gap-4 p-6 sm:p-8 pb-4 border-b border-slate-100 pn-modal-compact">
+          <div>
+            <h3 className="text-2xl font-bold text-slate-800 mb-1">
+              {mode === 'view' && 'Student Details'}
+              {mode === 'edit' && 'Edit Student'}
+              {mode === 'add' && 'Add New Student'}
+            </h3>
+            <p className="text-slate-500 text-sm">
+              {mode === 'view' ? 'Readonly view of student information.' : 'Fill in the details below.'}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-        <h3 className="text-2xl font-bold text-slate-800 mb-1">
-          {mode === 'view' && 'Student Details'}
-          {mode === 'edit' && 'Edit Student'}
-          {mode === 'add' && 'Add New Student'}
-        </h3>
-        <p className="text-slate-500 text-sm mb-6">
-          {mode === 'view' ? 'Readonly view of student information.' : 'Fill in the details below.'}
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="pn-modal-body pn-modal-compact p-6 sm:p-8 pt-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">Name (English)</label>
             <input
@@ -1002,23 +1012,24 @@ const StudentModal: React.FC<{
               className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60"
             />
           </div>
-        </div>
+          </div>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl text-slate-500 font-bold hover:bg-slate-50 transition-colors"
-          >
-            Close
-          </button>
-          {mode !== 'view' && (
+          <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
             <button
-              onClick={onSave}
-              className="px-7 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-colors"
+              onClick={onClose}
+              className="px-5 py-3 rounded-xl text-slate-500 font-bold hover:bg-slate-50 transition-colors w-full sm:w-auto"
             >
-              Save
+              Close
             </button>
-          )}
+            {mode !== 'view' && (
+              <button
+                onClick={onSave}
+                className="px-7 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-colors w-full sm:w-auto"
+              >
+                Save
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

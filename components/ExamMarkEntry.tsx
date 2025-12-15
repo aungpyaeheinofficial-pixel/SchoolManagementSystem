@@ -688,7 +688,7 @@ export const ExamMarkEntry: React.FC = () => {
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
             <button 
               onClick={() => {
                 setShowImportModal(false);
@@ -697,7 +697,7 @@ export const ExamMarkEntry: React.FC = () => {
                 setImportError(null);
                 if (fileInputRef.current) fileInputRef.current.value = '';
               }}
-              className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"
+              className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
             >
               <X size={20} />
             </button>

@@ -5,6 +5,8 @@ import {
   Plus, Search, Edit3, Trash2, X, MoreHorizontal, 
   DollarSign, Calendar, Users, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ModalPortal';
 
 export const FeeStructures: React.FC = () => {
   // State
@@ -29,6 +31,9 @@ export const FeeStructures: React.FC = () => {
   };
   
   const [formData, setFormData] = useState<Partial<FeeType>>(initialFormState);
+
+  // Ensure modal always appears in-frame on both desktop + mobile
+  useModalScrollLock(isModalOpen, { scrollToTopOnOpen: true });
 
   // --- Helpers ---
   const filteredFees = fees.filter(fee => {
@@ -227,16 +232,17 @@ export const FeeStructures: React.FC = () => {
 
       {/* --- ADD/EDIT MODAL --- */}
       {isModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-               <button onClick={handleCloseModal} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors">
-                  <X size={20} />
-               </button>
-               
-               <h3 className="text-2xl font-bold text-slate-800 mb-1">{editingId ? 'Edit Fee Structure' : 'Create New Fee'}</h3>
-               <p className="text-slate-500 text-sm mb-6">Define fee details, amounts, and applicable grades.</p>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && handleCloseModal()}>
+              <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
+                <button onClick={handleCloseModal} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close">
+                    <X size={20} />
+                </button>
+                
+                <h3 className="text-2xl font-bold text-slate-800 mb-1">{editingId ? 'Edit Fee Structure' : 'Create New Fee'}</h3>
+                <p className="text-slate-500 text-sm mb-6">Define fee details, amounts, and applicable grades.</p>
 
-               <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Basic Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
@@ -375,9 +381,10 @@ export const FeeStructures: React.FC = () => {
                         {editingId ? 'Update Fee' : 'Create Fee Structure'}
                      </button>
                   </div>
-               </form>
-            </div>
-         </div>
+                </form>
+              </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );

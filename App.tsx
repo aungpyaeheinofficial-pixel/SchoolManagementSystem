@@ -292,7 +292,7 @@ const AppContent: React.FC = () => {
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 scroll-smooth">
+        <div data-app-scroll-container="true" className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 scroll-smooth">
           <div className="max-w-[1600px] mx-auto pb-10">
             {renderContent()}
           </div>

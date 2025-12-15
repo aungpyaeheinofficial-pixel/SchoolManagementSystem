@@ -463,9 +463,9 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
           </form>
        </div>
 
-       {/* Navigation Buttons */}
-       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-40 lg:pl-[280px]">
-          <div className="max-w-4xl mx-auto flex justify-between items-center">
+       {/* Navigation Buttons (sticky so it behaves correctly inside modals and on mobile) */}
+       <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 p-3 sm:p-4 z-40">
+          <div className="max-w-4xl mx-auto flex justify-between items-center gap-3">
              <button 
                onClick={prevStep}
                disabled={currentStep === 1}
@@ -475,14 +475,14 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
              </button>
              
              <div className="flex items-center gap-3">
-                <button type="button" className="hidden md:flex items-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">
+                <button type="button" className="hidden sm:flex items-center gap-2 px-4 sm:px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">
                    <Save size={18} /> Save Draft
                 </button>
                 
                 {currentStep < 4 ? (
                    <button 
                      onClick={nextStep}
-                     className="flex items-center gap-2 px-8 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all active:scale-95"
+                     className="flex items-center gap-2 px-6 sm:px-8 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all active:scale-95"
                    >
                       Next Step <ChevronRight size={20} />
                    </button>
@@ -490,7 +490,7 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
                    <button 
                      onClick={handleSubmit}
                      disabled={isSubmitting}
-                     className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-600/30 hover:bg-green-700 transition-all active:scale-95 disabled:bg-slate-400"
+                     className="flex items-center gap-2 px-6 sm:px-8 py-3 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-600/30 hover:bg-green-700 transition-all active:scale-95 disabled:bg-slate-400"
                    >
                       {isSubmitting ? 'Submitting...' : 'Submit Application'} <CheckCircle2 size={20} />
                    </button>

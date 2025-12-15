@@ -215,10 +215,10 @@ export const HR: React.FC = () => {
       {/* --- Add Staff Modal --- */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white rounded-[32px] p-8 w-full max-w-lg shadow-2xl">
+           <div className="bg-white rounded-[32px] p-4 sm:p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
              <div className="flex justify-between items-center mb-6">
                <h3 className="text-2xl font-bold text-slate-800">Add New Staff</h3>
-               <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+               <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 pn-modal-close">
                  <X size={20} />
                </button>
              </div>
@@ -298,10 +298,10 @@ export const HR: React.FC = () => {
       {/* --- Payslip Modal --- */}
       {isPayslipOpen && selectedStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden relative">
+           <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col pn-modal-panel">
               
               {/* Slip Header */}
-              <div className="bg-brand-600 p-8 text-white relative overflow-hidden">
+              <div className="bg-brand-600 p-6 sm:p-8 text-white relative overflow-hidden flex-shrink-0">
                  <div className="absolute top-0 right-0 p-8 opacity-10">
                     <Wallet size={120} />
                  </div>
@@ -326,7 +326,7 @@ export const HR: React.FC = () => {
               </div>
 
               {/* Slip Body */}
-              <div className="p-8 space-y-8">
+              <div className="p-4 sm:p-8 space-y-8 overflow-y-auto pn-modal-compact">
                  <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-4">
                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Earnings</h4>

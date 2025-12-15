@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { CLASSES_MOCK, ROOMS_MOCK, STAFF_MOCK, GRADE_LEVELS_LIST } from '../constants';
 import { ClassGroup, Room } from '../types';
 import { 
@@ -65,6 +65,74 @@ export const AcademicClasses: React.FC = () => {
       return matchesSearch && matchesGrade;
     });
   }, [classes, classSearch, classGradeFilter]);
+
+  // Ref for modal overlay
+  const modalOverlayRef = useRef<HTMLDivElement>(null);
+
+  // Prevent body scroll when modal is open (both mobile and desktop)
+  useEffect(() => {
+    if (isAddClassOpen) {
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalBodyPosition = document.body.style.position;
+      const originalBodyTop = document.body.style.top;
+      const originalBodyWidth = document.body.style.width;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      
+      // Immediately scroll to top (multiple methods for cross-browser compatibility)
+      window.scrollTo(0, 0);
+      window.scrollTo(0, 0); // Call twice to ensure it works
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      
+      // Lock body and html scroll immediately
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = '0px';
+      document.body.style.width = '100%';
+      document.body.classList.add('modal-open');
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.classList.add('modal-open');
+      
+      // Ensure modal is visible after it renders
+      const ensureVisible = () => {
+        // Ensure viewport is at top
+        window.scrollTo(0, 0);
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+        
+        // If modal overlay exists, ensure it's at top of its scroll container
+        if (modalOverlayRef.current) {
+          modalOverlayRef.current.scrollTop = 0;
+        }
+      };
+      
+      // Call immediately and after a brief delay
+      ensureVisible();
+      const scrollCheck = setTimeout(ensureVisible, 50);
+      const scrollCheck2 = setTimeout(ensureVisible, 100);
+      
+      return () => {
+        clearTimeout(scrollCheck);
+        clearTimeout(scrollCheck2);
+        // Restore original styles
+        document.body.style.overflow = originalBodyOverflow;
+        document.body.style.position = originalBodyPosition;
+        document.body.style.top = originalBodyTop;
+        document.body.style.width = originalBodyWidth;
+        document.body.classList.remove('modal-open');
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.documentElement.classList.remove('modal-open');
+        
+        // Restore scroll position after styles are restored
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollY);
+          if (document.documentElement) document.documentElement.scrollTop = scrollY;
+          if (document.body) document.body.scrollTop = scrollY;
+        });
+      };
+    }
+  }, [isAddClassOpen]);
 
   // --- Handlers ---
   const handleDeleteClass = (id: string) => {
@@ -240,7 +308,8 @@ export const AcademicClasses: React.FC = () => {
 
        {/* Classes Table */}
        <div className="bg-white rounded-[32px] shadow-sm overflow-hidden border border-slate-50">
-          <table className="w-full text-left">
+          <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+          <table className="w-full text-left min-w-[900px]">
              <thead className="bg-slate-50/50">
                 <tr>
                    <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Class Name</th>
@@ -288,8 +357,8 @@ export const AcademicClasses: React.FC = () => {
                             <span className="text-xs font-bold text-slate-600">{cls.studentCount}/{cls.maxCapacity}</span>
                          </div>
                       </td>
-                      <td className="px-8 py-5 text-right">
-                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <td className="px-8 py-5 text-right">
+                                 <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto">
                             <button 
                               onClick={() => { 
                                 setEditingClass(cls); 
@@ -319,6 +388,7 @@ export const AcademicClasses: React.FC = () => {
                 ))}
              </tbody>
           </table>
+          </div>
        </div>
     </div>
   );
@@ -368,12 +438,18 @@ export const AcademicClasses: React.FC = () => {
 
       {/* --- Modals --- */}
       {isAddClassOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-               <button onClick={() => setIsAddClassOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"><X size={20} /></button>
-               <h3 className="text-2xl font-bold text-slate-800 mb-6">{editingClass ? 'Edit Class' : 'Add New Class'}</h3>
-               <form onSubmit={handleAddClass} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+         <div ref={modalOverlayRef} className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-start justify-center pt-8 sm:pt-12 md:items-center md:pt-4 p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsAddClassOpen(false)}>
+            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] pn-modal-panel md:my-4">
+               {/* Fixed Header */}
+               <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800">{editingClass ? 'Edit Class' : 'Add New Class'}</h3>
+                  <button onClick={() => setIsAddClassOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close"><X size={20} /></button>
+               </div>
+               
+               {/* Scrollable Body */}
+               <div className="flex-1 overflow-y-auto p-4 sm:p-6 pn-modal-compact" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+                  <form onSubmit={handleAddClass} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Class Name *</label>
                      <input 
@@ -401,7 +477,7 @@ export const AcademicClasses: React.FC = () => {
             </div>
          </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Section</label>
                      <input 
@@ -434,7 +510,7 @@ export const AcademicClasses: React.FC = () => {
                      </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Max Capacity</label>
                         <input 
@@ -478,7 +554,8 @@ export const AcademicClasses: React.FC = () => {
                   <button type="submit" className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-600/20 transition-all mt-6">
                      {editingClass ? 'Save Changes' : 'Create Class'}
                   </button>
-               </form>
+                  </form>
+               </div>
             </div>
          </div>
       )}

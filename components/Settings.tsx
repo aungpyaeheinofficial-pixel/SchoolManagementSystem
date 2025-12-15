@@ -636,7 +636,8 @@ export const Settings: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <table className="w-full min-w-[760px]">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Grade</th>
@@ -682,6 +683,7 @@ export const Settings: React.FC = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -852,7 +854,8 @@ export const Settings: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <table className="w-full min-w-[860px]">
           <thead className="bg-slate-50">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">User</th>
@@ -915,6 +918,7 @@ export const Settings: React.FC = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -1165,10 +1169,10 @@ export const Settings: React.FC = () => {
       {/* Grade Modal */}
       {isGradeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-lg text-slate-900">{editingGrade ? 'Edit Grade' : 'Add Grade'}</h3>
-              <button onClick={() => setIsGradeModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => setIsGradeModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg pn-modal-close">
                 <X size={20} />
               </button>
             </div>
@@ -1247,10 +1251,10 @@ export const Settings: React.FC = () => {
       {/* User Modal */}
       {isUserModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-lg text-slate-900">{editingUser ? 'Edit User' : 'Add User'}</h3>
-              <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+              <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg pn-modal-close">
                 <X size={20} />
               </button>
             </div>
@@ -1331,7 +1335,7 @@ export const Settings: React.FC = () => {
       {/* Reset Confirmation Modal */}
       {isResetConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={32} className="text-red-600" />

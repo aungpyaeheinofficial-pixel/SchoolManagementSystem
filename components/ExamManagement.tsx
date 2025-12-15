@@ -5,6 +5,8 @@ import {
   FileText, Plus, Calendar, CheckCircle2, AlertCircle, 
   MoreHorizontal, Clock, Trash2, X, Search, Filter, PenSquare
 } from 'lucide-react';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ModalPortal';
 
 export const ExamManagement: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>(EXAMS_MOCK);
@@ -19,6 +21,9 @@ export const ExamManagement: React.FC = () => {
     status: 'Upcoming',
     classes: []
   });
+
+  // Ensure modal always appears in-frame on both desktop + mobile
+  useModalScrollLock(isModalOpen, { scrollToTopOnOpen: true });
 
   // --- Helpers ---
   const getStatusColor = (status: string) => {
@@ -277,12 +282,13 @@ export const ExamManagement: React.FC = () => {
 
       {/* Add/Edit Exam Modal */}
       {isModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-               <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"><X size={20} /></button>
-               <h3 className="text-2xl font-bold text-slate-800 mb-6">{editingId ? 'Edit Exam Schedule' : 'Schedule New Exam'}</h3>
-               
-               <form onSubmit={handleSaveExam} className="space-y-4">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+              <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
+                <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"><X size={20} /></button>
+                <h3 className="text-2xl font-bold text-slate-800 mb-6">{editingId ? 'Edit Exam Schedule' : 'Schedule New Exam'}</h3>
+                
+                <form onSubmit={handleSaveExam} className="space-y-4">
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-2">Exam Name</label>
                      <input 
@@ -382,9 +388,10 @@ export const ExamManagement: React.FC = () => {
                   >
                      {editingId ? 'Update Exam Schedule' : 'Create Exam Schedule'}
                   </button>
-               </form>
-            </div>
-         </div>
+                </form>
+              </div>
+          </div>
+        </ModalPortal>
       )}
 
     </div>

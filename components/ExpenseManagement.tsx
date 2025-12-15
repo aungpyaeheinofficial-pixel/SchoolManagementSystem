@@ -10,6 +10,8 @@ import {
   RefreshCw, FileText, ArrowUpDown
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ModalPortal';
 
 type SortField = 'date' | 'amount' | 'category';
 type SortOrder = 'asc' | 'desc';
@@ -43,6 +45,9 @@ export const ExpenseManagement: React.FC = () => {
   };
 
   const [formData, setFormData] = useState<Partial<Expense>>(initialFormState);
+
+  // Ensure modal always appears in-frame on both desktop + mobile
+  useModalScrollLock(isModalOpen, { scrollToTopOnOpen: true });
 
   // Filtering & Sorting
   const filteredExpenses = useMemo(() => {
@@ -472,16 +477,17 @@ export const ExpenseManagement: React.FC = () => {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-8 relative max-h-[90vh] overflow-y-auto">
-            <button onClick={handleCloseModal} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors">
-              <X size={20} />
-            </button>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && handleCloseModal()}>
+            <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
+              <button onClick={handleCloseModal} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close">
+                <X size={20} />
+              </button>
 
-            <h3 className="text-2xl font-bold text-slate-900 mb-1">{editingId ? 'Edit Expense' : 'Add New Expense'}</h3>
-            <p className="text-slate-600 text-sm mb-6 font-burmese">အသုံးစရိတ် အချက်အလက်များ ထည့်သွင်းပါ</p>
+              <h3 className="text-2xl font-bold text-slate-900 mb-1">{editingId ? 'Edit Expense' : 'Add New Expense'}</h3>
+              <p className="text-slate-600 text-sm mb-6 font-burmese">အသုံးစရိတ် အချက်အလက်များ ထည့်သွင်းပါ</p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -669,9 +675,10 @@ export const ExpenseManagement: React.FC = () => {
                   {editingId ? 'Update Expense' : 'Add Expense'}
                 </button>
               </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

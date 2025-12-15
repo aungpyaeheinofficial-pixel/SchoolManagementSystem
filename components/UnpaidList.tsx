@@ -148,18 +148,18 @@ export const UnpaidList: React.FC<UnpaidListProps> = ({ onNavigate }) => {
           <p className="text-slate-500 font-burmese mt-1 leading-loose">မပေးသေးသူစာရင်းနှင့် အကြွေးကျန်များ</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
            <button 
              onClick={handleRemindAll}
              disabled={unpaidStudents.length === 0}
-             className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+             className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
            >
               <Bell size={18} />
               <span className="hidden sm:inline">Remind All</span>
            </button>
            <button 
              onClick={handleCollect}
-             className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center gap-2"
+             className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
            >
               <span>Go to Payments</span>
               <ArrowRight size={18} />

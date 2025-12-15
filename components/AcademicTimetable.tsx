@@ -9,6 +9,8 @@ import {
   Check, RefreshCw, Download
 } from 'lucide-react';
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ModalPortal';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const;
 
@@ -47,6 +49,8 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
 
   const [selectedClassId, setSelectedClassId] = useState(CLASSES_MOCK[0]?.id || '');
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [isWeekPickerOpen, setIsWeekPickerOpen] = useState(false);
+  const [weekPickerDate, setWeekPickerDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,6 +73,9 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Ensure any open modal appears in-frame (app uses an inner scroll container)
+  useModalScrollLock(isModalOpen || isPrintModalOpen || isCopyModalOpen || isWeekPickerOpen, { scrollToTopOnOpen: true });
 
   // Get class room
   const selectedClass = CLASSES_MOCK.find(c => c.id === selectedClassId);
@@ -160,6 +167,19 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
   const goToPrevWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));
   const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
   const goToToday = () => setCurrentWeek(new Date());
+
+  const openWeekPicker = () => {
+    setWeekPickerDate(format(currentWeek, 'yyyy-MM-dd'));
+    setIsWeekPickerOpen(true);
+  };
+
+  const applyWeekPicker = () => {
+    if (!weekPickerDate) return;
+    const d = new Date(weekPickerDate);
+    if (Number.isNaN(d.getTime())) return;
+    setCurrentWeek(d);
+    setIsWeekPickerOpen(false);
+  };
 
   // --- Drag and Drop Handlers ---
 
@@ -526,7 +546,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   <ChevronLeft size={20} />
                 </button>
                 <button 
-                  onClick={goToToday}
+                  onClick={openWeekPicker}
                   className="px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Calendar size={16} />
@@ -758,11 +778,12 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
 
        {/* Edit/Add Modal */}
        {isModalOpen && editingSlot && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
                <button 
                   onClick={() => setIsModalOpen(false)} 
-                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"
+                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
                >
                   <X size={20} />
                </button>
@@ -774,7 +795,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   {editingSlot.day} • {TIME_SLOTS.find(s => s.id === editingSlot.periodId)?.label} ({TIME_SLOTS.find(s => s.id === editingSlot.periodId)?.startTime})
                </p>
 
-               <form onSubmit={handleSave} className="space-y-4">
+              <form onSubmit={handleSave} className="space-y-4 overflow-y-auto pn-modal-body">
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
                      <select 
@@ -834,16 +855,18 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   </div>
                </form>
             </div>
-         </div>
+          </div>
+        </ModalPortal>
        )}
 
        {/* Print Modal */}
        {isPrintModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && setIsPrintModalOpen(false)}>
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
                <button 
                   onClick={() => setIsPrintModalOpen(false)} 
-                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"
+                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
                >
                   <X size={20} />
                </button>
@@ -856,7 +879,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   Choose what to print
                </p>
 
-               <div className="space-y-4">
+              <div className="space-y-4 overflow-y-auto pn-modal-body">
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-2">Print Options</label>
                      <select 
@@ -891,16 +914,18 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   </button>
                </div>
             </div>
-         </div>
+          </div>
+        </ModalPortal>
        )}
 
        {/* Copy Modal */}
        {isCopyModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && (setIsCopyModalOpen(false), setCopyTargetClassId(''))}>
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
                <button 
                   onClick={() => { setIsCopyModalOpen(false); setCopyTargetClassId(''); }}
-                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"
+                  className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
                >
                   <X size={20} />
                </button>
@@ -913,7 +938,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   တစ်ပတ်ကနေ တစ်ပတ် copy ကူးခြင်း
                </p>
 
-               <div className="space-y-4">
+              <div className="space-y-4 overflow-y-auto pn-modal-body">
                   <div className="p-4 bg-brand-50 rounded-xl border border-brand-100">
                     <p className="text-sm font-bold text-brand-700 mb-2">Source Schedule</p>
                     <p className="text-slate-700">{selectedClass?.name}</p>
@@ -964,8 +989,70 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                   </div>
                </div>
             </div>
-         </div>
+          </div>
+        </ModalPortal>
        )}
+
+      {/* Week Picker Modal */}
+      {isWeekPickerOpen && (
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper"
+            onClick={(e) => e.target === e.currentTarget && setIsWeekPickerOpen(false)}
+          >
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-6 sm:p-8 relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
+              <button
+                onClick={() => setIsWeekPickerOpen(false)}
+                className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+
+              <h3 className="text-2xl font-bold text-slate-900 mb-1">Select Week</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                Choose any date — we’ll open the week that contains it.
+              </p>
+
+              <div className="space-y-4 overflow-y-auto pn-modal-body">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Pick a date</label>
+                  <input
+                    type="date"
+                    value={weekPickerDate}
+                    onChange={(e) => setWeekPickerDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Current: <span className="font-bold text-slate-700">{weekLabel}</span>
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentWeek(new Date());
+                      setWeekPickerDate(format(new Date(), 'yyyy-MM-dd'));
+                      setIsWeekPickerOpen(false);
+                    }}
+                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyWeekPicker}
+                    className="flex-1 py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-600/20 transition-all"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </div>
   );
 };

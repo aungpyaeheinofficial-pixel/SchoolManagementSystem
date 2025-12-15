@@ -153,7 +153,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ date, setDate 
         `}
       >
         <CalendarIcon size={16} className="text-slate-400" />
-        <span className="min-w-[180px] text-left">{getButtonLabel()}</span>
+        <span className="min-w-[140px] max-w-[60vw] sm:max-w-none text-left truncate">{getButtonLabel()}</span>
         <ChevronDownIcon className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 

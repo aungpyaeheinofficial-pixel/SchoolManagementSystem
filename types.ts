@@ -52,6 +52,7 @@ export type ViewState =
   | 'FINANCE_FEES'
   | 'FINANCE_PAYMENTS'
   | 'FINANCE_UNPAID'
+  | 'FINANCE_EXPENSES'
   | 'HR' 
   | 'HR_ATTENDANCE'
   | 'ACADEMIC_CLASSES'
@@ -59,7 +60,13 @@ export type ViewState =
   | 'ACADEMIC_TIMETABLE'
   | 'EXAM_MANAGEMENT'
   | 'EXAM_MARKS_ENTRY'
-  | 'EXAM_REPORT_CARDS';
+  | 'EXAM_REPORT_CARDS'
+  | 'EXAM_ANALYTICS'
+  | 'REPORTS_STUDENTS'
+  | 'REPORTS_FINANCE'
+  | 'REPORTS_ATTENDANCE'
+  | 'REPORTS_ACADEMIC'
+  | 'SETTINGS';
 
 // Finance Specific Types
 export interface Expense {

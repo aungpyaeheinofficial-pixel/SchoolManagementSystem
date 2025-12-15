@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { STUDENTS_MOCK, STAFF_MOCK, EXPENSES_MOCK, CLASSES_MOCK, MARKS_MOCK, EXAMS_MOCK, SUBJECTS_MOCK, GRADE_LEVELS_LIST } from '../constants';
 import { DateRangePicker, DateRange } from './DateRangePicker';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -16,6 +16,10 @@ interface ReportsProps {
 
 export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) => {
   const [reportType, setReportType] = useState<ReportType>(initialType);
+  // Keep report type in sync when navigating via Sidebar (same component instance, new prop)
+  useEffect(() => {
+    setReportType(initialType);
+  }, [initialType]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(subMonths(new Date(), 1)),
     to: endOfMonth(new Date())
