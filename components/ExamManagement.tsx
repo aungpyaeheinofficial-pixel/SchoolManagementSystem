@@ -284,11 +284,15 @@ export const ExamManagement: React.FC = () => {
       {isModalOpen && (
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
-              <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
-                <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"><X size={20} /></button>
-                <h3 className="text-2xl font-bold text-slate-800 mb-6">{editingId ? 'Edit Exam Schedule' : 'Schedule New Exam'}</h3>
-                
-                <form onSubmit={handleSaveExam} className="space-y-4">
+              <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
+                {/* Fixed header */}
+                <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800">{editingId ? 'Edit Exam Schedule' : 'Schedule New Exam'}</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 pn-modal-close"><X size={20} /></button>
+                </div>
+
+                {/* Scrollable body */}
+                <form onSubmit={handleSaveExam} className="flex-1 overflow-y-auto pn-modal-body space-y-4 p-4 sm:p-6">
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-2">Exam Name</label>
                      <input 

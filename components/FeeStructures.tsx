@@ -234,15 +234,20 @@ export const FeeStructures: React.FC = () => {
       {isModalOpen && (
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay pn-modal-upper" onClick={(e) => e.target === e.currentTarget && handleCloseModal()}>
-              <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl p-4 sm:p-8 relative max-h-[90vh] overflow-y-auto pn-modal-panel pn-modal-compact">
-                <button onClick={handleCloseModal} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close">
-                    <X size={20} />
-                </button>
-                
-                <h3 className="text-2xl font-bold text-slate-800 mb-1">{editingId ? 'Edit Fee Structure' : 'Create New Fee'}</h3>
-                <p className="text-slate-500 text-sm mb-6">Define fee details, amounts, and applicable grades.</p>
+              <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl relative max-h-[90vh] flex flex-col pn-modal-panel pn-modal-compact">
+                {/* Fixed header */}
+                <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-800">{editingId ? 'Edit Fee Structure' : 'Create New Fee'}</h3>
+                    <p className="text-slate-500 text-sm mt-1">Define fee details, amounts, and applicable grades.</p>
+                  </div>
+                  <button onClick={handleCloseModal} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close">
+                      <X size={20} />
+                  </button>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Scrollable body */}
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pn-modal-body space-y-6 p-4 sm:p-6">
                   {/* Basic Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>

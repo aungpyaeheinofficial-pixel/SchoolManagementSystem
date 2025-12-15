@@ -688,22 +688,38 @@ export const ExamReportCards: React.FC = () => {
         <div className="bg-white rounded-[24px] w-full max-w-4xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
           
           {/* Modal Header Actions */}
-          <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 print:hidden">
-            <h3 className="font-bold text-slate-700">Report Card Preview</h3>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => exportReportCardPDF(student)} 
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600"
-              >
-                <FileDown size={16} /> Export PDF
-              </button>
-              <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-700">
-                <Printer size={16} /> Print
-              </button>
-              <button onClick={onClose} className="p-2 bg-slate-200 text-slate-600 rounded-full hover:bg-slate-300">
-                <X size={20} />
-              </button>
+          <div className="sticky top-0 z-10 p-4 bg-slate-50 border-b border-slate-200 print:hidden relative pr-14">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h3 className="font-bold text-slate-700 text-sm sm:text-base min-w-0 truncate">
+                Report Card Preview
+              </h3>
+
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-start sm:justify-end">
+                <button
+                  onClick={() => exportReportCardPDF(student)}
+                  className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-500 text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-red-600"
+                >
+                  <FileDown size={16} />
+                  <span className="hidden sm:inline">Export PDF</span>
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-brand-600 text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-brand-700"
+                >
+                  <Printer size={16} />
+                  <span className="hidden sm:inline">Print</span>
+                </button>
+              </div>
             </div>
+
+            {/* Always-visible close button (mobile + desktop) */}
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 p-2 bg-slate-200 text-slate-600 rounded-full hover:bg-slate-300"
+              aria-label="Close report card preview"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           {/* Printable Content Area */}
