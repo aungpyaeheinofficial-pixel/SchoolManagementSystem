@@ -1,0 +1,7 @@
+{
+  "name": "Pyin Nyar Nan Daw (ပညာနန်းတော်) Purple ",
+  "description": "Next-Gen School Management System for Myanmar. A comprehensive, bilingual (English/Burmese) platform for student information, attendance, academic grading, and finance management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
