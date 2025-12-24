@@ -23,6 +23,24 @@ async function main() {
     });
   }
 
+  // Seed a teacher account
+  const teacherUser = await prisma.user.findUnique({ where: { username: 'teacher' } });
+  if (!teacherUser) {
+    const passwordHash = await bcrypt.hash(process.env.TEACHER_PASSWORD || 'teacher123', 12);
+    await prisma.user.create({
+      data: { username: 'teacher', passwordHash, role: 'teacher', schoolId: school.id },
+    });
+  }
+
+  // Seed an accountant account
+  const accountantUser = await prisma.user.findUnique({ where: { username: 'accountant' } });
+  if (!accountantUser) {
+    const passwordHash = await bcrypt.hash(process.env.ACCOUNTANT_PASSWORD || 'account123', 12);
+    await prisma.user.create({
+      data: { username: 'accountant', passwordHash, role: 'accountant', schoolId: school.id },
+    });
+  }
+
   // Create an empty dataset record so /sync/pull works on first run
   const datasetKey = process.env.DATASET_KEY || 'default';
   const existingDataset = await prisma.dataset.findUnique({ where: { schoolId_key: { schoolId: school.id, key: datasetKey } } });

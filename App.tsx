@@ -26,6 +26,7 @@ import { ViewState } from './types';
 import { Menu, LogOut, User, Bell, ChevronDown } from 'lucide-react';
 import { DataService } from './services/dataService';
 import { canAccessView, normalizeRole } from './utils/rbac';
+import { apiFetch, getApiBaseUrl, getAuthToken, setAuthToken } from './services/api';
 
 interface AuthUser {
   email: string;
@@ -56,6 +57,28 @@ const AppContent: React.FC = () => {
         localStorage.removeItem('pnsp_current_user');
       }
     }
+  }, []);
+
+  // If API base exists and token is present, refresh session from /api/auth/me
+  useEffect(() => {
+    const base = getApiBaseUrl();
+    const token = getAuthToken();
+    if (!base || !token) return;
+
+    apiFetch<{ user: AuthUser }>('/api/auth/me', { auth: true })
+      .then((res) => {
+        if (res?.user) {
+          setCurrentUser(res.user);
+          setIsAuthenticated(true);
+          localStorage.setItem('pnsp_current_user', JSON.stringify(res.user));
+        }
+      })
+      .catch(() => {
+        // Token might be invalid; clear it
+        setAuthToken(null);
+        localStorage.removeItem('pnsp_current_user');
+        setIsAuthenticated(false);
+      });
   }, []);
 
   // If backend is configured, enable background auto-sync once per app session.
@@ -102,6 +125,7 @@ const AppContent: React.FC = () => {
     setIsAuthenticated(false);
     setCurrentView('DASHBOARD');
     localStorage.removeItem('pnsp_current_user');
+    setAuthToken(null);
     setShowUserMenu(false);
   };
 
