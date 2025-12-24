@@ -25,6 +25,7 @@ import { DataProvider, useData } from './contexts/DataContext';
 import { ViewState } from './types';
 import { Menu, LogOut, User, Bell, ChevronDown } from 'lucide-react';
 import { DataService } from './services/dataService';
+import { canAccessView, normalizeRole } from './utils/rbac';
 
 interface AuthUser {
   email: string;
@@ -62,10 +63,24 @@ const AppContent: React.FC = () => {
     DataService.startAutoSync();
   }, []);
 
+  const getDefaultViewForRole = (roleRaw: string | null | undefined): ViewState => {
+    const role = normalizeRole(roleRaw);
+    if (role === 'admin') return 'DASHBOARD';
+    if (role === 'teacher') return 'ATTENDANCE';
+    if (role === 'accountant') return 'FINANCE';
+    return 'DASHBOARD';
+  };
+
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
     localStorage.setItem('pnsp_current_user', JSON.stringify(user));
+
+    // Redirect to first allowed view for this role
+    const nextView = canAccessView(user.role, currentView)
+      ? currentView
+      : getDefaultViewForRole(user.role);
+    setCurrentView(nextView);
 
     // Backend sync flow:
     // - Pull server dataset
@@ -95,8 +110,21 @@ const AppContent: React.FC = () => {
     return <Login onLogin={handleLogin} />;
   }
 
+  // Enforce role-based access: if current view not allowed, snap to default
+  const effectiveRole = currentUser?.role || 'teacher';
+  const allowedView = canAccessView(effectiveRole, currentView);
+  useEffect(() => {
+    if (!canAccessView(effectiveRole, currentView)) {
+      setCurrentView(getDefaultViewForRole(effectiveRole));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRole, currentView]);
+  const viewToRender = canAccessView(effectiveRole, currentView)
+    ? currentView
+    : getDefaultViewForRole(effectiveRole);
+
   const renderContent = () => {
-    switch (currentView) {
+    switch (viewToRender) {
       case 'DASHBOARD':
         return <Dashboard onNavigate={setCurrentView} />;
       case 'STUDENTS':
@@ -183,18 +211,20 @@ const AppContent: React.FC = () => {
   };
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
+    switch (normalizeRole(role)) {
       case 'admin': return 'bg-violet-100 text-violet-700';
       case 'teacher': return 'bg-emerald-100 text-emerald-700';
+      case 'accountant': return 'bg-amber-100 text-amber-700';
       case 'student': return 'bg-blue-100 text-blue-700';
       default: return 'bg-slate-100 text-slate-700';
     }
   };
 
   const getRoleLabel = (role: string) => {
-    switch (role) {
+    switch (normalizeRole(role)) {
       case 'admin': return 'Administrator';
       case 'teacher': return 'Teacher';
+      case 'accountant': return 'Accountant';
       case 'student': return 'Student';
       default: return role;
     }
@@ -211,6 +241,7 @@ const AppContent: React.FC = () => {
         setIsMobileOpen={setIsMobileOpen}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
+        role={currentUser?.role || 'teacher'}
       />
 
       {/* Main Content Area */}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NAV_ITEMS, APP_NAME_EN, APP_NAME_MM } from '../constants';
+import { canAccessView, normalizeRole } from '../utils/rbac';
 import { ViewState } from '../types';
 import { School, LogOut, ChevronDown, ChevronRight, X, MoreHorizontal } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface SidebarProps {
   setIsMobileOpen: (open: boolean) => void;
   isCollapsed?: boolean;
   setIsCollapsed?: (collapsed: boolean) => void;
+  role?: string | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -18,8 +20,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen, 
   setIsMobileOpen,
   isCollapsed = false,
-  setIsCollapsed
+  setIsCollapsed,
+  role = 'teacher',
 }) => {
+  const normalizedRole = normalizeRole(role);
   // State to track expanded parent groups
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['HR_GROUP', 'ACADEMIC_GROUP', 'FINANCE_GROUP']);
   // State to track active popover
@@ -87,6 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [activePopover]);
 
   const renderNavItem = (item: any, isChild = false) => {
+    // Permission filter: parent or child
+    if (!item.children) {
+      if (!canAccessView(normalizedRole, item.id as ViewState)) return null;
+    }
+
     const Icon = item.icon;
     const isParent = item.children && item.children.length > 0;
     const isExpanded = expandedGroups.includes(item.id);
@@ -96,6 +105,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const isChildActive = isParent && item.children.some((child: any) => child.id === currentView);
     const isGroupActive = isChildActive;
     const isPopoverOpen = activePopover === item.id;
+
+    // If parent, filter children by permission
+    const allowedChildren = isParent
+      ? item.children.filter((child: any) => canAccessView(normalizedRole, child.id as ViewState))
+      : [];
+    if (isParent && allowedChildren.length === 0) {
+      return null;
+    }
 
     return (
       <div 
@@ -185,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Render Children if Expanded (normal mode) */}
         {isParent && isExpanded && !isCollapsed && (
           <div className="mt-1 space-y-1 animate-fade-in origin-top">
-            {item.children.map((child: any) => renderNavItem(child, true))}
+            {allowedChildren.map((child: any) => renderNavItem(child, true))}
           </div>
         )}
       </div>

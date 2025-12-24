@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   GraduationCap, Eye, EyeOff, Lock, Mail, User, 
   ArrowRight, BookOpen, Users, Award,
-  Shield, ChevronDown
+  Shield, ChevronDown, Wallet
 } from 'lucide-react';
 import { apiFetch, setAuthToken, getApiBaseUrl } from '../services/api';
 
@@ -10,11 +10,12 @@ interface LoginProps {
   onLogin: (user: { email: string; role: string; name: string }) => void;
 }
 
-type UserRole = 'admin' | 'teacher' | 'student';
+type UserRole = 'admin' | 'teacher' | 'accountant' | 'student';
 
 const DEMO_USERS = {
   admin: { email: 'admin@pnnd.edu.mm', password: 'admin123', name: 'U Kyaw Zaw', role: 'admin' },
   teacher: { email: 'teacher@pnnd.edu.mm', password: 'teacher123', name: 'Daw Aye Aye', role: 'teacher' },
+  accountant: { email: 'accountant@pnnd.edu.mm', password: 'account123', name: 'Daw Thin Thin', role: 'accountant' },
   student: { email: 'student@pnnd.edu.mm', password: 'student123', name: 'Mg Aung Ko', role: 'student' },
 };
 
@@ -101,6 +102,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       color: 'from-emerald-600 to-teal-600',
       bgColor: 'bg-emerald-100',
       textColor: 'text-emerald-700'
+    },
+    accountant: { 
+      icon: Wallet, 
+      label: 'Accountant', 
+      labelMm: 'စာရင်းကိုင်',
+      color: 'from-amber-600 to-orange-600',
+      bgColor: 'bg-amber-100',
+      textColor: 'text-amber-700'
     },
     student: { 
       icon: GraduationCap, 
