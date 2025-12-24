@@ -67,14 +67,47 @@ export class DataService {
     localStorage.setItem('pnsp_server_version', String(version));
   }
 
-  static async pullFromServer(): Promise<{ version: number }> {
+  private static isDatasetEmpty(data: any): boolean {
+    if (!data || typeof data !== 'object') return true;
+
+    const arrays = [
+      data.students,
+      data.staff,
+      data.expenses,
+      data.exams,
+      data.marks,
+      data.timetable,
+      data.classes,
+      data.rooms,
+      data.subjects,
+      data.feeStructures,
+      data.payments,
+    ];
+
+    const arraysEmpty = arrays.every((v) => !Array.isArray(v) || v.length === 0);
+    const attendanceEmpty =
+      !data.attendance || (typeof data.attendance === 'object' && Object.keys(data.attendance).length === 0);
+    const staffAttendanceEmpty =
+      !data.staffAttendance || (typeof data.staffAttendance === 'object' && Object.keys(data.staffAttendance).length === 0);
+
+    return arraysEmpty && attendanceEmpty && staffAttendanceEmpty;
+  }
+
+  static async pullFromServer(): Promise<{ version: number; isEmpty: boolean; data: any | null }> {
     const res = await apiFetch<{ version: number; data: any | null }>('/api/sync/pull', { auth: true });
-    if (res?.data) {
+    const version = res?.version || 0;
+    const data = res?.data ?? null;
+    const isEmpty = this.isDatasetEmpty(data);
+
+    // Keep local notion of server version so conflict detection works.
+    this.setLocalServerVersion(version);
+
+    if (data && !isEmpty) {
       // Import into local storage so existing app continues to work unchanged.
-      this.importAllData(JSON.stringify(res.data));
-      this.setLocalServerVersion(res.version || 0);
+      this.importAllData(JSON.stringify(data));
     }
-    return { version: res?.version || 0 };
+
+    return { version, isEmpty, data };
   }
 
   static async pushToServer(): Promise<{ version: number }> {

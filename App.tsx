@@ -67,10 +67,19 @@ const AppContent: React.FC = () => {
     setIsAuthenticated(true);
     localStorage.setItem('pnsp_current_user', JSON.stringify(user));
 
-    // Best-effort: pull latest server dataset right after login (if backend enabled)
-    DataService.pullFromServer().catch(() => {
-      // silent; app still works offline/local-first
-    });
+    // Backend sync flow:
+    // - Pull server dataset
+    // - If server is empty (fresh DB), push current local dataset to seed server tables
+    DataService.pullFromServer()
+      .then(({ isEmpty }) => {
+        if (isEmpty) {
+          return DataService.pushToServer().catch(() => undefined);
+        }
+        return undefined;
+      })
+      .catch(() => {
+        // silent; app still works offline/local-first
+      });
   };
 
   const handleLogout = () => {
