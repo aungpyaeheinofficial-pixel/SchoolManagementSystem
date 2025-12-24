@@ -317,7 +317,7 @@ export const UnpaidList: React.FC<UnpaidListProps> = ({ onNavigate }) => {
                            <td className="px-6 py-5">
                               <div className="flex items-center gap-4">
                                  <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-sm border border-slate-200">
-                                    {student.nameEn.charAt(0)}
+                                    {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
                                  </div>
                                  <div>
                                     <p className="font-bold text-slate-800 text-sm">{student.nameEn}</p>

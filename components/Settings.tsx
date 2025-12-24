@@ -389,7 +389,7 @@ export const Settings: React.FC = () => {
           className="w-24 h-24 bg-brand-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg overflow-hidden"
           style={schoolInfo.logo ? { backgroundImage: `url(${schoolInfo.logo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
         >
-          {!schoolInfo.logo && schoolInfo.nameEn.charAt(0)}
+          {!schoolInfo.logo && (schoolInfo.nameEn || schoolInfo.nameMm || '?').charAt(0)}
         </div>
         <div>
           <h3 className="text-xl font-bold text-slate-900">{schoolInfo.nameEn}</h3>
@@ -871,7 +871,7 @@ export const Settings: React.FC = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center font-bold">
-                      {user.name.charAt(0)}
+                      {(user.name || user.email || '?').charAt(0)}
                     </div>
                     <div>
                       <p className="font-bold text-slate-800">{user.name}</p>

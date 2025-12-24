@@ -996,9 +996,9 @@ export const ExamReportCards: React.FC = () => {
 
                 <div className="mb-6">
                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg border border-brand-100">
-                         {student.nameEn.charAt(0)}
-                      </div>
+                     <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg border border-brand-100">
+                        {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
+                     </div>
                       <div>
                          <h4 className="font-bold text-slate-800 leading-tight">{student.nameEn}</h4>
                          <p className="text-xs text-slate-400 font-mono mt-0.5">{student.id}</p>

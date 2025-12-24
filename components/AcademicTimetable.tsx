@@ -740,7 +740,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                                     
                                     <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100/50 mt-1">
                                         <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold ${hasTeacherConflict ? 'bg-red-200 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                                          {teacher?.name.charAt(0)}
+                                          {(teacher?.name || '?').charAt(0)}
                                         </div>
                                         <span className={`text-xs font-medium truncate ${hasTeacherConflict ? 'text-red-600' : 'text-slate-500'}`}>
                                           {teacher?.name}

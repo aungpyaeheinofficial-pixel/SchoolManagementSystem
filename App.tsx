@@ -307,7 +307,7 @@ const AppContent: React.FC = () => {
                   className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors"
                 >
                   <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
-                    {currentUser?.name.charAt(0)}
+                    {currentUser?.name?.charAt(0) || '?'}
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-bold text-slate-900 leading-tight">{currentUser?.name}</p>
@@ -328,7 +328,7 @@ const AppContent: React.FC = () => {
                       <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                            {currentUser?.name.charAt(0)}
+                            {currentUser?.name?.charAt(0) || '?'}
                           </div>
                           <div>
                             <p className="font-bold text-slate-900">{currentUser?.name}</p>

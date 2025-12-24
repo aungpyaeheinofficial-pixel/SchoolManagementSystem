@@ -225,7 +225,7 @@ export const Attendance: React.FC = () => {
                            <td className="px-6 py-5">
                               <div className="flex items-center gap-4">
                                  <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm bg-brand-50 text-brand-600 border-2 border-white shadow-sm">
-                                    {student.nameEn.charAt(0)}
+                                    {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
                                  </div>
                                  <div>
                                     <p className="font-bold text-slate-800 text-sm">{student.nameEn}</p>

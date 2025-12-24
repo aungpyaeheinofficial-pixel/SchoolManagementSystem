@@ -164,7 +164,7 @@ export const PaymentEntry: React.FC = () => {
                         className="w-full text-left p-4 rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-4 group"
                       >
                          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
-                            {student.nameEn.charAt(0)}
+                            {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
                          </div>
                          <div>
                             <h4 className="font-bold text-slate-800">{student.nameEn}</h4>
@@ -200,7 +200,7 @@ export const PaymentEntry: React.FC = () => {
           <div className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-50 flex items-center justify-between">
              <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-2xl">
-                   {selectedStudent?.nameEn.charAt(0)}
+                  {(selectedStudent?.nameEn || selectedStudent?.nameMm || selectedStudent?.id || '?').charAt(0)}
                 </div>
                 <div>
                    <h3 className="text-xl font-bold text-slate-800">{selectedStudent?.nameEn}</h3>

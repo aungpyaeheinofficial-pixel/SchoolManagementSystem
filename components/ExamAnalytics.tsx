@@ -809,7 +809,7 @@ export const ExamAnalytics: React.FC = () => {
                 <div className="bg-brand-50 p-4 rounded-xl mb-6">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold">
-                      {selectedStudentProgress.student.nameEn.charAt(0)}
+                      {(selectedStudentProgress?.student?.nameEn || selectedStudentProgress?.student?.nameMm || selectedStudentProgress?.student?.id || '?').charAt(0)}
                     </div>
                     <div>
                       <h4 className="text-xl font-bold text-slate-800">{selectedStudentProgress.student.nameEn}</h4>

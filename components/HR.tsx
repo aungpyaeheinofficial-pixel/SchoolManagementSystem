@@ -203,7 +203,7 @@ export const HR: React.FC = () => {
                     <td className="px-8 py-5">
                         <div className="flex items-center">
                              <div className="h-10 w-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold mr-4 text-sm border border-brand-100">
-                                {staff.name.charAt(0)}
+                                {(staff.name || staff.id || '?').charAt(0)}
                              </div>
                              <div>
                                 <p className="font-bold text-slate-800 text-sm">{staff.name}</p>
@@ -351,7 +351,7 @@ export const HR: React.FC = () => {
                  </div>
                  <div className="mt-6 flex items-center space-x-4">
                     <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-xl backdrop-blur-sm">
-                      {selectedStaff.name.charAt(0)}
+                      {(selectedStaff.name || selectedStaff.id || '?').charAt(0)}
                     </div>
                     <div>
                       <p className="font-bold text-lg">{selectedStaff.name}</p>

@@ -417,7 +417,7 @@ export const AcademicClasses: React.FC = () => {
                       <td className="px-8 py-5">
                          <div className="flex items-center gap-2">
                              <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                {cls.teacherName.charAt(0)}
+                                {(cls.teacherName || '?').charAt(0)}
                              </div>
                              <span className="text-sm font-medium text-slate-700">{cls.teacherName}</span>
                          </div>

@@ -700,7 +700,7 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                           <div className="h-12 w-12 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-lg font-bold border border-brand-200">
-                            {student.nameEn.charAt(0)}
+                            {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
                           </div>
                           <div>
                             <h4 className="font-bold text-slate-800">{student.nameEn}</h4>
