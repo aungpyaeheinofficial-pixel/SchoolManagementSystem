@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { 
   CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, 
   Upload, Camera, Save, FileText, Calendar, User, 
@@ -41,9 +41,59 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
   
   // Photo Preview State
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  type RequiredDocKey = 'birthCertificate' | 'transferCertificate' | 'previousReportCard' | 'medicalRecord';
+  const REQUIRED_DOCS: { key: RequiredDocKey; label: string }[] = useMemo(
+    () => [
+      { key: 'birthCertificate', label: 'Birth Certificate' },
+      { key: 'transferCertificate', label: 'Transfer Certificate (TC)' },
+      { key: 'previousReportCard', label: 'Previous Report Card' },
+      { key: 'medicalRecord', label: 'Medical Record' },
+    ],
+    []
+  );
+
+  const fileInputRefs = useRef<Partial<Record<RequiredDocKey, HTMLInputElement | null>>>({});
+
+  interface SelectedDoc {
+    file: File;
+    previewUrl?: string;
+  }
+
+  const [selectedDocs, setSelectedDocs] = useState<Partial<Record<RequiredDocKey, SelectedDoc>>>({});
+
+  const DOC_STORAGE_KEY = 'pnsp_student_documents';
+  const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB per doc (localStorage-friendly)
+
+  const triggerDocPicker = (key: RequiredDocKey) => {
+    setDocError(null);
+    fileInputRefs.current[key]?.click();
+  };
+
+  const handleDocSelected = (key: RequiredDocKey, file: File) => {
+    setDocError(null);
+
+    const isPreviewable = file.type.startsWith('image/') || file.type === 'application/pdf';
+    const previewUrl = isPreviewable ? URL.createObjectURL(file) : undefined;
+
+    // Revoke previous preview URL (avoid leaks)
+    const prev = selectedDocs[key];
+    if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+
+    setSelectedDocs((p) => ({ ...p, [key]: { file, previewUrl } }));
+  };
+
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
 
   const [formData, setFormData] = useState({
     // Step 1: Academic
@@ -105,8 +155,9 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
     setIsSubmitting(false);
     setSuccess(true);
     // Map form data to Student shape and persist
+    const newStudentId = formData.admissionNo || `ST-${Date.now()}`;
     const newStudent: Student = {
-      id: formData.admissionNo || `ST-${Date.now()}`,
+      id: newStudentId,
       nameEn: formData.nameEn || 'New Student',
       nameMm: formData.nameMm || '',
       fatherName: formData.fatherName || '',
@@ -120,6 +171,35 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
     };
     if (onSubmitStudent) onSubmitStudent(newStudent);
     else addStudent(newStudent);
+
+    // Persist uploaded documents to localStorage (best-effort, size-limited)
+    try {
+      const storeRaw = localStorage.getItem(DOC_STORAGE_KEY);
+      const storeObj: Record<string, any> = storeRaw ? JSON.parse(storeRaw) : {};
+
+      const docsOut: Record<string, any> = {};
+      for (const { key, label } of REQUIRED_DOCS) {
+        const sel = selectedDocs[key];
+        if (!sel?.file) continue;
+
+        const f = sel.file;
+        if (f.size > MAX_FILE_BYTES) {
+          docsOut[key] = { label, name: f.name, type: f.type, size: f.size, tooLarge: true, savedAt: new Date().toISOString() };
+          continue;
+        }
+
+        const dataUrl = await fileToDataUrl(f);
+        docsOut[key] = { label, name: f.name, type: f.type, size: f.size, dataUrl, savedAt: new Date().toISOString() };
+      }
+
+      if (Object.keys(docsOut).length) {
+        storeObj[newStudentId] = docsOut;
+        localStorage.setItem(DOC_STORAGE_KEY, JSON.stringify(storeObj));
+      }
+    } catch (err: any) {
+      setDocError(`Upload saved locally failed: ${String(err?.message || err)}`);
+    }
+
     setTimeout(() => setSuccess(false), 3000);
     if (onClose) onClose();
   };
@@ -382,21 +462,62 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
        {/* Documents */}
        <div>
           <h3 className="font-bold text-slate-800 mb-4">Required Documents</h3>
+          {docError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span className="font-medium">{docError}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {['Birth Certificate', 'Transfer Certificate (TC)', 'Previous Report Card', 'Medical Record'].map((doc) => (
-                <div key={doc} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-brand-300 transition-colors">
+             {REQUIRED_DOCS.map(({ key, label }) => {
+                const sel = selectedDocs[key];
+                const isSelected = !!sel?.file;
+                return (
+                <div key={key} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-brand-300 transition-colors">
                    <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-100 rounded-lg text-slate-500">
                          <FileText size={20} />
                       </div>
-                      <span className="text-sm font-medium text-slate-700">{doc}</span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-slate-700 block truncate">{label}</span>
+                        {isSelected && (
+                          <span className="text-xs text-slate-500 block truncate">
+                            {sel!.file.name} • {(sel!.file.size / 1024).toFixed(0)} KB
+                          </span>
+                        )}
+                      </div>
                    </div>
-                   <button type="button" className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg hover:bg-brand-100">
-                      Upload
+
+                   <input
+                     ref={(el) => {
+                       fileInputRefs.current[key] = el;
+                     }}
+                     type="file"
+                     accept="image/*,application/pdf"
+                     className="hidden"
+                     onChange={(e) => {
+                       const file = e.target.files?.[0];
+                       if (file) handleDocSelected(key, file);
+                       // allow picking same file again
+                       e.currentTarget.value = '';
+                     }}
+                   />
+
+                   <button
+                     type="button"
+                     onClick={() => triggerDocPicker(key)}
+                     className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                       isSelected ? 'text-green-700 bg-green-50 hover:bg-green-100' : 'text-brand-600 bg-brand-50 hover:bg-brand-100'
+                     }`}
+                   >
+                     {isSelected ? 'Selected ✓' : 'Upload'}
                    </button>
                 </div>
-             ))}
+             )})}
           </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Note: uploads are stored locally in your browser for now (until backend file storage is added). Large files may not save.
+          </p>
        </div>
     </div>
   );
