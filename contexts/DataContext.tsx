@@ -136,6 +136,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [payments, setPaymentsState] = useState<Payment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Keep classes sorted KG -> Grade 12 (fallback alpha) for consistent dropdowns/lists
+  const sortClasses = (list: ClassGroup[]) => {
+    const gradeRank = (text: string) => {
+      const lower = text.toLowerCase();
+      if (lower.startsWith('kg')) return 0;
+      const match = lower.match(/grade\s*(\d{1,2})/);
+      return match ? parseInt(match[1], 10) : 99;
+    };
+    return [...list].sort((a, b) => {
+      const aRank = gradeRank(a.gradeLevel || a.name || '');
+      const bRank = gradeRank(b.gradeLevel || b.name || '');
+      if (aRank !== bRank) return aRank - bRank;
+      return (a.section || '').localeCompare(b.section || '');
+    });
+  };
+
   // Load initial data
   const loadData = () => {
     setIsSyncing(true);
@@ -146,7 +162,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setExamsState(DataService.getExams());
       setMarksState(DataService.getMarks());
       setTimetableState(DataService.getTimetable());
-      setClassesState(DataService.getClasses());
+      setClassesState(sortClasses(DataService.getClasses()));
       setRoomsState(DataService.getRooms());
       setSubjectsState(DataService.getSubjects());
       setFeeStructuresState(DataService.getFeeStructures());
@@ -189,7 +205,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           setTimetableState(DataService.getTimetable());
           break;
         case 'pnsp_classes':
-          setClassesState(DataService.getClasses());
+          setClassesState(sortClasses(DataService.getClasses()));
           break;
         case 'pnsp_rooms':
           setRoomsState(DataService.getRooms());
@@ -374,23 +390,24 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   const setClasses = (newClasses: ClassGroup[]) => {
-    setClassesState(newClasses);
-    DataService.saveClasses(newClasses);
+    const sorted = sortClasses(newClasses);
+    setClassesState(sorted);
+    DataService.saveClasses(sorted);
   };
 
   const addClass = (classGroup: ClassGroup) => {
     DataService.addClass(classGroup);
-    setClassesState(DataService.getClasses());
+    setClassesState(sortClasses(DataService.getClasses()));
   };
 
   const updateClass = (id: string, updates: Partial<ClassGroup>) => {
     DataService.updateClass(id, updates);
-    setClassesState(DataService.getClasses());
+    setClassesState(sortClasses(DataService.getClasses()));
   };
 
   const deleteClass = (id: string) => {
     DataService.deleteClass(id);
-    setClassesState(DataService.getClasses());
+    setClassesState(sortClasses(DataService.getClasses()));
   };
 
   const setRooms = (newRooms: Room[]) => {
