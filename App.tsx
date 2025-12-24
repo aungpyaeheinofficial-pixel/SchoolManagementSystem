@@ -129,23 +129,24 @@ const AppContent: React.FC = () => {
     setShowUserMenu(false);
   };
 
-  // If not authenticated, show login page
+  // Enforce role-based access: keep hooks order stable (do not return before hooks)
+  const effectiveRole = currentUser?.role || 'teacher';
+  useEffect(() => {
+    if (isAuthenticated && !canAccessView(effectiveRole, currentView)) {
+      setCurrentView(getDefaultViewForRole(effectiveRole));
+    }
+  }, [isAuthenticated, effectiveRole, currentView]);
+
+  const viewToRender = !isAuthenticated
+    ? 'DASHBOARD'
+    : canAccessView(effectiveRole, currentView)
+      ? currentView
+      : getDefaultViewForRole(effectiveRole);
+
+  // Render login after hooks execute
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
-
-  // Enforce role-based access: if current view not allowed, snap to default
-  const effectiveRole = currentUser?.role || 'teacher';
-  const allowedView = canAccessView(effectiveRole, currentView);
-  useEffect(() => {
-    if (!canAccessView(effectiveRole, currentView)) {
-      setCurrentView(getDefaultViewForRole(effectiveRole));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveRole, currentView]);
-  const viewToRender = canAccessView(effectiveRole, currentView)
-    ? currentView
-    : getDefaultViewForRole(effectiveRole);
 
   const renderContent = () => {
     switch (viewToRender) {
