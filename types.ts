@@ -91,6 +91,41 @@ export interface Transaction {
   paymentMethod: string;
 }
 
+// Payments (single receipt with multiple items)
+export interface PaymentItem {
+  lineNo: number;
+  feeTypeId?: string;
+  description?: string;
+  amount: number;
+}
+
+export interface Payment {
+  id: string;
+  studentId?: string;
+  payerName?: string;
+  paymentMethod: string;
+  remark?: string;
+  discount: number;
+  totalAmount: number;
+  date: string; // ISO date string (yyyy-mm-dd)
+  items: PaymentItem[];
+  meta?: Record<string, any>;
+}
+
+// Attendance shapes (matches backend datasetService nested format)
+export type StudentAttendanceDataset = Record<
+  string, // date (yyyy-mm-dd)
+  Record<
+    string, // classId
+    Record<string, { status: AttendanceStatus; remark: string }>
+  >
+>;
+
+export type StaffAttendanceDataset = Record<
+  string, // date (yyyy-mm-dd)
+  Record<string, { status: AttendanceStatus; checkIn: string; checkOut: string; remark: string }>
+>;
+
 export interface FeeType {
   id: string;
   nameEn: string;

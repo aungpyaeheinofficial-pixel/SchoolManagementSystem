@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { STUDENTS_MOCK, FEE_STRUCTURES_MOCK } from '../constants';
-import { Student, FeeType } from '../types';
+import { Student, Payment } from '../types';
 import { 
   Search, User, CheckCircle2, DollarSign, Calendar, CreditCard, 
   Printer, X, ChevronRight, Wallet, Banknote, History, Filter
 } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 export const PaymentEntry: React.FC = () => {
+  const { students, feeStructures, addPayment, updateStudent } = useData();
+
   // Steps: 'SEARCH' -> 'FEES' -> 'RECEIPT'
   const [step, setStep] = useState<'SEARCH' | 'FEES' | 'RECEIPT'>('SEARCH');
   
@@ -25,16 +27,16 @@ export const PaymentEntry: React.FC = () => {
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
-    return STUDENTS_MOCK.filter(s => 
+    return students.filter(s => 
       s.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) || 
       s.nameMm.includes(searchTerm) ||
       s.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [searchTerm, students]);
 
   const applicableFees = useMemo(() => {
     if (!selectedStudent) return [];
-    return FEE_STRUCTURES_MOCK.filter(fee => {
+    return feeStructures.filter(fee => {
       if (!fee.isActive) return false;
       const isAll = fee.applicableGrades.includes('All');
       // Simple grade matching logic: check if student grade string contains fee grade key
@@ -42,7 +44,7 @@ export const PaymentEntry: React.FC = () => {
       const isGradeMatch = fee.applicableGrades.some(g => selectedStudent.grade.includes(g));
       return isAll || isGradeMatch;
     });
-  }, [selectedStudent]);
+  }, [selectedStudent, feeStructures]);
 
   const totalPayable = useMemo(() => {
     const fees = applicableFees.filter(f => selectedFeeIds.includes(f.id));
@@ -57,7 +59,7 @@ export const PaymentEntry: React.FC = () => {
     setSearchTerm('');
     // Auto-select all fees by default for convenience
     // In a real app, we'd check which are already paid
-    const fees = FEE_STRUCTURES_MOCK.filter(fee => {
+    const fees = feeStructures.filter(fee => {
         if (!fee.isActive) return false;
         const isAll = fee.applicableGrades.includes('All');
         const isGradeMatch = fee.applicableGrades.some(g => student.grade.includes(g));
@@ -74,7 +76,45 @@ export const PaymentEntry: React.FC = () => {
   };
 
   const handleProcessPayment = () => {
-    // In a real app, API call to save transaction goes here
+    if (!selectedStudent) return;
+
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+
+    const selectedFees = applicableFees.filter((f) => selectedFeeIds.includes(f.id));
+    const subtotal = selectedFees.reduce((sum, f) => sum + f.amount, 0);
+    const totalAmount = Math.max(0, subtotal - discount);
+
+    const payment: Payment = {
+      id: `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: selectedStudent.id,
+      payerName: selectedStudent.nameEn,
+      paymentMethod,
+      remark: remark || undefined,
+      discount: Number.isFinite(discount) ? discount : 0,
+      totalAmount,
+      date,
+      items: selectedFees.map((f, idx) => ({
+        lineNo: idx + 1,
+        feeTypeId: f.id,
+        description: f.nameEn,
+        amount: f.amount,
+      })),
+      meta: {
+        source: 'PaymentEntry',
+      },
+    };
+
+    addPayment(payment);
+
+    // Update student fee status (simple: reduce pending by paid total)
+    const nextPending = Math.max(0, (selectedStudent.feesPending || 0) - totalAmount);
+    updateStudent(selectedStudent.id, {
+      feesPending: nextPending,
+      lastPaymentDate: date,
+      status: nextPending > 0 ? 'Fees Due' : (selectedStudent.status === 'Fees Due' ? 'Active' : selectedStudent.status),
+    });
+
     setStep('RECEIPT');
   };
 

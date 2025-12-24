@@ -9,16 +9,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area 
 } from 'recharts';
-import { STUDENTS_MOCK } from '../constants';
-import { Expense, Transaction } from '../types';
-
-// --- Mock Data ---
-
-const EXPENSES_MOCK: Expense[] = [
-  { id: "EXP-001", category: 'Utilities', description: 'Electricity Bill - Nov', amount: 15000, date: '2024-12-10', paymentMethod: 'Bank Transfer', status: 'Paid' },
-  { id: "EXP-002", category: 'Salaries', description: 'Teacher Salaries - Nov', amount: 500000, date: '2024-12-08', paymentMethod: 'Bank Transfer', status: 'Paid' },
-  { id: "EXP-003", category: 'Supplies', description: 'Office Stationery', amount: 25000, date: '2024-12-05', paymentMethod: 'Cash', status: 'Paid' },
-];
+import { Expense, Payment, Transaction } from '../types';
+import { useData } from '../contexts/DataContext';
 
 const TRANSACTIONS_MOCK: Transaction[] = [
   { id: "TRX-001", name: "Ma Hla Hla", type: 'Income', description: 'Tuition Fee - Dec', amount: 50000, date: '2024-12-10', status: 'Verified', paymentMethod: 'KBZPay' },
@@ -45,6 +37,7 @@ const EXPENSE_BREAKDOWN = [
 type Tab = 'OVERVIEW' | 'FEES' | 'EXPENSES' | 'REPORTS';
 
 export const Finance: React.FC = () => {
+  const { students, expenses, payments, addExpense, addPayment, updateStudent } = useData();
   const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
   
   // States for Fees Collection
@@ -91,7 +84,37 @@ export const Finance: React.FC = () => {
   };
 
   const handlePaymentSubmit = () => {
-    // Logic to save payment would go here
+    if (!selectedStudentForPayment) return;
+
+    const date = new Date().toISOString().slice(0, 10);
+    const totalAmount = Math.max(0, Number(selectedStudentForPayment.feesPending || 0));
+
+    const payment: Payment = {
+      id: `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: selectedStudentForPayment.id,
+      payerName: selectedStudentForPayment.nameEn,
+      paymentMethod,
+      remark: undefined,
+      discount: 0,
+      totalAmount,
+      date,
+      items: [
+        {
+          lineNo: 1,
+          description: 'Fees Payment',
+          amount: totalAmount,
+        },
+      ],
+      meta: { source: 'Finance' },
+    };
+
+    addPayment(payment);
+    updateStudent(selectedStudentForPayment.id, {
+      feesPending: 0,
+      lastPaymentDate: date,
+      status: selectedStudentForPayment.status === 'Fees Due' ? 'Active' : selectedStudentForPayment.status,
+    });
+
     setPaymentStep('RECEIPT');
   };
 
@@ -316,7 +339,7 @@ export const Finance: React.FC = () => {
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-50">
-                {STUDENTS_MOCK.map((student) => (
+                {students.map((student) => (
                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                          <p className="font-bold text-slate-800 text-sm">{student.nameEn}</p>
@@ -383,7 +406,7 @@ export const Finance: React.FC = () => {
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {EXPENSES_MOCK.map((expense) => (
+          {expenses.map((expense) => (
              <div key={expense.id} className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-50 hover:shadow-md transition-shadow group">
                 <div className="flex justify-between items-start mb-4">
                    <div className={`p-3 rounded-2xl transition-colors ${
@@ -689,7 +712,11 @@ export const Finance: React.FC = () => {
               <form className="space-y-4">
                  <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Category</label>
-                    <select className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-500/20">
+                    <select
+                      value={newExpense.category || 'Others'}
+                      onChange={(e) => setNewExpense((p) => ({ ...p, category: e.target.value as any }))}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-500/20"
+                    >
                        <option>Salaries</option>
                        <option>Utilities</option>
                        <option>Supplies</option>
@@ -699,14 +726,44 @@ export const Finance: React.FC = () => {
                  </div>
                  <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
-                    <input type="text" className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20" placeholder="e.g. Office Supplies" />
+                    <input
+                      type="text"
+                      value={newExpense.description || ''}
+                      onChange={(e) => setNewExpense((p) => ({ ...p, description: e.target.value }))}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      placeholder="e.g. Office Supplies"
+                    />
                  </div>
                  <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Amount</label>
-                    <input type="number" className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 font-mono" placeholder="0" />
+                    <input
+                      type="number"
+                      value={newExpense.amount ?? ''}
+                      onChange={(e) => setNewExpense((p) => ({ ...p, amount: Number(e.target.value) }))}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 font-mono"
+                      placeholder="0"
+                    />
                  </div>
                  <div className="pt-4">
-                    <button type="button" onClick={() => setIsAddExpenseOpen(false)} className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newExpense.description || !newExpense.amount) return;
+                        const exp: Expense = {
+                          id: `EXP-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                          category: (newExpense.category || 'Others') as any,
+                          description: newExpense.description,
+                          amount: Number(newExpense.amount),
+                          date: new Date().toISOString().slice(0, 10),
+                          paymentMethod: newExpense.paymentMethod || 'Cash',
+                          status: 'Paid',
+                        };
+                        addExpense(exp);
+                        setIsAddExpenseOpen(false);
+                        setNewExpense({ category: 'Others', paymentMethod: 'Cash' });
+                      }}
+                      className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all"
+                    >
                        Save Expense
                     </button>
                  </div>

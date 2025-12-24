@@ -4,6 +4,7 @@ import {
   Upload, Camera, Save, FileText, Calendar, User, 
   MapPin, Phone, GraduationCap, Info 
 } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 const STEPS = [
   { id: 1, label: 'Academic', labelMm: 'ပညာရေး' },
@@ -36,6 +37,7 @@ interface AdmissionsProps {
 }
 
 export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose }) => {
+  const { addStudent } = useData();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -98,27 +100,26 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate API call (UI feedback) but still persist via DataContext/localStorage
+    await new Promise(resolve => setTimeout(resolve, 500));
     setIsSubmitting(false);
     setSuccess(true);
-    // Map form data to Student shape and propagate if handler exists
-    if (onSubmitStudent) {
-      const newStudent: Student = {
-        id: formData.admissionNo || `ST-${Date.now()}`,
-        nameEn: formData.nameEn || 'New Student',
-        nameMm: formData.nameMm || '',
-        fatherName: formData.fatherName || '',
-        grade: formData.grade || '',
-        nrc: formData.nrc || '',
-        dob: formData.dob || '',
-        status: 'Active',
-        attendanceRate: 100,
-        feesPending: 0,
-        phone: formData.phone || formData.fatherPhone || ''
-      };
-      onSubmitStudent(newStudent);
-    }
+    // Map form data to Student shape and persist
+    const newStudent: Student = {
+      id: formData.admissionNo || `ST-${Date.now()}`,
+      nameEn: formData.nameEn || 'New Student',
+      nameMm: formData.nameMm || '',
+      fatherName: formData.fatherName || '',
+      grade: formData.grade || '',
+      nrc: formData.nrc || '',
+      dob: formData.dob || '',
+      status: 'Active',
+      attendanceRate: 100,
+      feesPending: 0,
+      phone: formData.phone || formData.fatherPhone || ''
+    };
+    if (onSubmitStudent) onSubmitStudent(newStudent);
+    else addStudent(newStudent);
     setTimeout(() => setSuccess(false), 3000);
     if (onClose) onClose();
   };

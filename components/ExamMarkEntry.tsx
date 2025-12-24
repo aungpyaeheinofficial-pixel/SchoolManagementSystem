@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { EXAMS_MOCK, CLASSES_MOCK, SUBJECTS_MOCK, STUDENTS_MOCK, MARKS_MOCK } from '../constants';
 import { ExamResult } from '../types';
 import { useData } from '../contexts/DataContext';
 import { 
@@ -21,12 +20,12 @@ const GRADE_SCALE = [
 ];
 
 export const ExamMarkEntry: React.FC = () => {
-  const { marks: contextMarks, setMarks, addMark, updateMark } = useData();
+  const { exams, classes, subjects, students, marks: contextMarks, setMarks } = useData();
   
   // --- Selection State ---
-  const [selectedExamId, setSelectedExamId] = useState<string>(EXAMS_MOCK[0]?.id || '');
-  const [selectedClassId, setSelectedClassId] = useState<string>(CLASSES_MOCK[2]?.id || '');
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(SUBJECTS_MOCK[0]?.id || '');
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   
   // --- Subject Search State ---
   const [subjectSearchOpen, setSubjectSearchOpen] = useState(false);
@@ -35,9 +34,7 @@ export const ExamMarkEntry: React.FC = () => {
   const subjectInputRef = useRef<HTMLInputElement>(null);
   
   // --- Data State ---
-  const [currentMarks, setCurrentMarks] = useState<ExamResult[]>(
-    contextMarks.length > 0 ? contextMarks : MARKS_MOCK
-  );
+  const [currentMarks, setCurrentMarks] = useState<ExamResult[]>(contextMarks);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -59,28 +56,40 @@ export const ExamMarkEntry: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // --- Derived Data ---
-  const selectedClass = CLASSES_MOCK.find(c => c.id === selectedClassId);
-  const selectedSubject = SUBJECTS_MOCK.find(s => s.id === selectedSubjectId);
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+  const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
   
   // Filter subjects based on search
   const filteredSubjects = useMemo(() => {
     const term = subjectSearchTerm.toLowerCase();
-    return SUBJECTS_MOCK.filter(sub => 
+    return subjects.filter(sub => 
       sub.code.toLowerCase().includes(term) ||
       sub.nameEn.toLowerCase().includes(term) ||
       sub.nameMm.includes(subjectSearchTerm)
     );
-  }, [subjectSearchTerm]);
+  }, [subjectSearchTerm, subjects]);
 
   // Filter students belonging to the selected class
   const classStudents = useMemo(() => {
-    return STUDENTS_MOCK.filter(s => {
-      if (selectedClass?.name.includes("Grade 10")) return s.grade.includes("Grade 10");
-      if (selectedClass?.name.includes("Grade 9")) return s.grade.includes("Grade 9");
-      if (selectedClass?.name.includes("Grade 11")) return s.grade.includes("Grade 11");
-      return true;
-    });
+    if (!selectedClass) return [];
+    return students.filter((s) => s.grade === selectedClass.name);
   }, [selectedClassId, selectedClass]);
+
+  // Keep currentMarks synced with context (first load + after refresh)
+  useEffect(() => {
+    setCurrentMarks(contextMarks);
+  }, [contextMarks]);
+
+  // Initialize selection defaults once data is loaded
+  useEffect(() => {
+    if (!selectedExamId && exams.length) setSelectedExamId(exams[0].id);
+  }, [exams, selectedExamId]);
+  useEffect(() => {
+    if (!selectedClassId && classes.length) setSelectedClassId(classes[0].id);
+  }, [classes, selectedClassId]);
+  useEffect(() => {
+    if (!selectedSubjectId && subjects.length) setSelectedSubjectId(subjects[0].id);
+  }, [subjects, selectedSubjectId]);
 
   // --- Auto-calculate Grade ---
   const calculateGrade = useCallback((score: number): { grade: string; color: string } => {
@@ -330,7 +339,7 @@ export const ExamMarkEntry: React.FC = () => {
           }
 
           // Validate student exists
-          const student = STUDENTS_MOCK.find(s => s.id === studentId);
+          const student = students.find(s => s.id === studentId);
           
           if (studentId && !isNaN(score)) {
             parsed.push({ studentId, score, remark, studentName });
@@ -365,7 +374,7 @@ export const ExamMarkEntry: React.FC = () => {
 
   const handleImportConfirm = () => {
     const validData = importData.filter(d => {
-      const student = STUDENTS_MOCK.find(s => s.id === d.studentId);
+      const student = students.find(s => s.id === d.studentId);
       return student && d.score >= 0 && d.score <= 100;
     });
 
@@ -482,7 +491,7 @@ export const ExamMarkEntry: React.FC = () => {
                     onChange={(e) => setSelectedExamId(e.target.value)}
                     className="w-full pl-10 pr-8 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer appearance-none"
                 >
-                    {EXAMS_MOCK.map(exam => (
+                    {exams.map(exam => (
                         <option key={exam.id} value={exam.id}>{exam.name}</option>
                     ))}
                 </select>
@@ -500,7 +509,7 @@ export const ExamMarkEntry: React.FC = () => {
                     onChange={(e) => setSelectedClassId(e.target.value)}
                     className="w-full pl-10 pr-8 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer appearance-none"
                 >
-                    {CLASSES_MOCK.map(cls => (
+                    {classes.map(cls => (
                         <option key={cls.id} value={cls.id}>{cls.name}</option>
                     ))}
                 </select>

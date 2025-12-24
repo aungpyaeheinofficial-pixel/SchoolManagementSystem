@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { EXAMS_MOCK, CLASSES_MOCK } from '../constants';
 import { Exam } from '../types';
 import { 
   FileText, Plus, Calendar, CheckCircle2, AlertCircle, 
@@ -7,9 +6,10 @@ import {
 } from 'lucide-react';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { ModalPortal } from './ModalPortal';
+import { useData } from '../contexts/DataContext';
 
 export const ExamManagement: React.FC = () => {
-  const [exams, setExams] = useState<Exam[]>(EXAMS_MOCK);
+  const { exams, addExam, updateExam, deleteExam, classes } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,22 +83,15 @@ export const ExamManagement: React.FC = () => {
     if (!newExam.name || !newExam.startDate || !newExam.endDate) return;
 
     if (editingId) {
-      // Update existing exam
-      setExams(prev => prev.map(exam => {
-        if (exam.id === editingId) {
-          return {
-            ...exam,
-            name: newExam.name!,
-            academicYear: newExam.academicYear!,
-            term: newExam.term!,
-            startDate: newExam.startDate!,
-            endDate: newExam.endDate!,
-            status: newExam.status as any,
-            classes: newExam.classes || []
-          };
-        }
-        return exam;
-      }));
+      updateExam(editingId, {
+        name: newExam.name!,
+        academicYear: newExam.academicYear!,
+        term: newExam.term!,
+        startDate: newExam.startDate!,
+        endDate: newExam.endDate!,
+        status: newExam.status as any,
+        classes: newExam.classes || [],
+      });
     } else {
       // Create new exam
       const exam: Exam = {
@@ -111,7 +104,7 @@ export const ExamManagement: React.FC = () => {
         status: newExam.status as any,
         classes: newExam.classes || []
       };
-      setExams([...exams, exam]);
+      addExam(exam);
     }
 
     setIsModalOpen(false);
@@ -126,7 +119,7 @@ export const ExamManagement: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this exam?')) {
-      setExams(prev => prev.filter(e => e.id !== id));
+      deleteExam(id);
     }
   };
 
@@ -237,7 +230,7 @@ export const ExamManagement: React.FC = () => {
                         </p>
                         <div className="flex flex-wrap gap-2">
                            {exam.classes.map(clsId => {
-                              const cls = CLASSES_MOCK.find(c => c.id === clsId);
+                              const cls = classes.find(c => c.id === clsId);
                               return cls ? (
                                  <span key={clsId} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
                                     {cls.name}
@@ -372,7 +365,7 @@ export const ExamManagement: React.FC = () => {
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-2">Applicable Classes</label>
                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl max-h-64 overflow-y-auto custom-scrollbar border border-slate-100">
-                        {CLASSES_MOCK.map(cls => (
+                        {classes.map(cls => (
                            <label key={cls.id} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-white rounded-lg transition-colors">
                               <input 
                                  type="checkbox" 

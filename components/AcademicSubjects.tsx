@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { SUBJECTS_MOCK, GRADE_LEVELS_LIST, CLASSES_MOCK } from '../constants';
+import { GRADE_LEVELS_LIST } from '../constants';
 import { Subject } from '../types';
 import { 
   BookOpen, Search, Filter, Plus, MoreHorizontal, 
@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { ModalPortal } from './ModalPortal';
+import { useData } from '../contexts/DataContext';
 
 export const AcademicSubjects: React.FC = () => {
-  const [subjects, setSubjects] = useState<Subject[]>(SUBJECTS_MOCK);
+  const { subjects, addSubject, updateSubject, deleteSubject, classes } = useData();
   const [filterGrade, setFilterGrade] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -53,7 +54,7 @@ export const AcademicSubjects: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to remove this subject?')) {
-      setSubjects(prev => prev.filter(s => s.id !== id));
+      deleteSubject(id);
     }
   };
 
@@ -70,9 +71,9 @@ export const AcademicSubjects: React.FC = () => {
       department: newSubject.department || 'General'
     };
     if (modalMode === 'edit' && editingId) {
-      setSubjects(prev => prev.map(s => s.id === editingId ? subject : s));
+      updateSubject(editingId, subject);
     } else {
-    setSubjects([...subjects, subject]);
+      addSubject(subject);
     }
     setIsModalOpen(false);
     setEditingId(null);
@@ -229,7 +230,7 @@ export const AcademicSubjects: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubjects.map((sub) => {
-            const taughtClasses = CLASSES_MOCK.filter(c => c.name.includes(sub.gradeLevel.split(' ')[1] || sub.gradeLevel));
+            const taughtClasses = classes.filter(c => c.name.includes(sub.gradeLevel.split(' ')[1] || sub.gradeLevel));
             return (
               <div key={`classes-${sub.id}`} className="border border-slate-100 rounded-2xl p-4 bg-slate-50/50 hover:bg-white transition-colors">
                 <div className="flex items-center justify-between mb-3">

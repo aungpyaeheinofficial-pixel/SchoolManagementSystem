@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { STUDENTS_MOCK, STAFF_MOCK, EXPENSES_MOCK, CLASSES_MOCK, MARKS_MOCK, EXAMS_MOCK, SUBJECTS_MOCK, GRADE_LEVELS_LIST } from '../constants';
+import { GRADE_LEVELS_LIST } from '../constants';
 import { DateRangePicker, DateRange } from './DateRangePicker';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import {
@@ -7,6 +7,7 @@ import {
   Users, GraduationCap, Wallet, CalendarCheck, BookOpen, Award, AlertCircle,
   DollarSign, CheckCircle2, Clock, XCircle, ArrowRight, ChevronDown
 } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 type ReportType = 'students' | 'finance' | 'attendance' | 'academic';
 
@@ -15,6 +16,7 @@ interface ReportsProps {
 }
 
 export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) => {
+  const { students, staff, expenses, exams, subjects, marks } = useData();
   const [reportType, setReportType] = useState<ReportType>(initialType);
   // Keep report type in sync when navigating via Sidebar (same component instance, new prop)
   useEffect(() => {
@@ -29,89 +31,89 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
 
   // Student Report Stats
   const studentStats = useMemo(() => {
-    const total = STUDENTS_MOCK.length;
-    const active = STUDENTS_MOCK.filter(s => s.status === 'Active').length;
-    const feesDue = STUDENTS_MOCK.filter(s => s.status === 'Fees Due' || s.feesPending > 0).length;
-    const graduated = STUDENTS_MOCK.filter(s => s.status === 'Graduated').length;
+    const total = students.length;
+    const active = students.filter(s => s.status === 'Active').length;
+    const feesDue = students.filter(s => s.status === 'Fees Due' || s.feesPending > 0).length;
+    const graduated = students.filter(s => s.status === 'Graduated').length;
     
     // By grade
     const byGrade = GRADE_LEVELS_LIST.map(grade => {
       const gradeKey = grade.split(' ')[0] + ' ' + (grade.split(' ')[1] || '');
       return {
         grade: grade,
-        count: STUDENTS_MOCK.filter(s => s.grade.includes(gradeKey.trim())).length
+        count: students.filter(s => s.grade.includes(gradeKey.trim())).length
       };
     }).filter(g => g.count > 0);
 
     // Attendance average
-    const avgAttendance = STUDENTS_MOCK.reduce((sum, s) => sum + s.attendanceRate, 0) / total;
+    const avgAttendance = total > 0 ? (students.reduce((sum, s) => sum + s.attendanceRate, 0) / total) : 0;
 
     return { total, active, feesDue, graduated, byGrade, avgAttendance };
-  }, []);
+  }, [students]);
 
   // Finance Report Stats
   const financeStats = useMemo(() => {
-    const totalExpenses = EXPENSES_MOCK.reduce((sum, e) => sum + e.amount, 0);
-    const paidExpenses = EXPENSES_MOCK.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.amount, 0);
-    const pendingExpenses = EXPENSES_MOCK.filter(e => e.status === 'Pending').reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const paidExpenses = expenses.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.amount, 0);
+    const pendingExpenses = expenses.filter(e => e.status === 'Pending').reduce((sum, e) => sum + e.amount, 0);
     
     // Fee collection (mock - total pending fees from students)
-    const totalFeesPending = STUDENTS_MOCK.reduce((sum, s) => sum + s.feesPending, 0);
-    const studentsWithFees = STUDENTS_MOCK.filter(s => s.feesPending > 0).length;
+    const totalFeesPending = students.reduce((sum, s) => sum + s.feesPending, 0);
+    const studentsWithFees = students.filter(s => s.feesPending > 0).length;
 
     // By category
-    const byCategory = EXPENSES_MOCK.reduce((acc, e) => {
+    const byCategory = expenses.reduce((acc, e) => {
       acc[e.category] = (acc[e.category] || 0) + e.amount;
       return acc;
     }, {} as Record<string, number>);
 
-    // Staff salaries (from STAFF_MOCK)
-    const totalSalaries = STAFF_MOCK.reduce((sum, s) => sum + s.baseSalary, 0);
+    // Staff salaries
+    const totalSalaries = staff.reduce((sum, s) => sum + s.baseSalary, 0);
 
     return { totalExpenses, paidExpenses, pendingExpenses, totalFeesPending, studentsWithFees, byCategory, totalSalaries };
-  }, []);
+  }, [expenses, staff, students]);
 
   // Attendance Report Stats
   const attendanceStats = useMemo(() => {
-    const avgStudentAttendance = STUDENTS_MOCK.reduce((sum, s) => sum + s.attendanceRate, 0) / STUDENTS_MOCK.length;
-    const excellentAttendance = STUDENTS_MOCK.filter(s => s.attendanceRate >= 90).length;
-    const poorAttendance = STUDENTS_MOCK.filter(s => s.attendanceRate < 75).length;
+    const avgStudentAttendance = students.length > 0 ? (students.reduce((sum, s) => sum + s.attendanceRate, 0) / students.length) : 0;
+    const excellentAttendance = students.filter(s => s.attendanceRate >= 90).length;
+    const poorAttendance = students.filter(s => s.attendanceRate < 75).length;
     
     // By grade
     const byGrade = GRADE_LEVELS_LIST.map(grade => {
       const gradeKey = grade.split(' ')[0] + ' ' + (grade.split(' ')[1] || '');
-      const students = STUDENTS_MOCK.filter(s => s.grade.includes(gradeKey.trim()));
-      const avg = students.length > 0 
-        ? students.reduce((sum, s) => sum + s.attendanceRate, 0) / students.length 
+      const gradeStudents = students.filter(s => s.grade.includes(gradeKey.trim()));
+      const avg = gradeStudents.length > 0 
+        ? gradeStudents.reduce((sum, s) => sum + s.attendanceRate, 0) / gradeStudents.length 
         : 0;
-      return { grade, avg, count: students.length };
+      return { grade, avg, count: gradeStudents.length };
     }).filter(g => g.count > 0);
 
-    return { avgStudentAttendance, excellentAttendance, poorAttendance, byGrade, totalStudents: STUDENTS_MOCK.length };
-  }, []);
+    return { avgStudentAttendance, excellentAttendance, poorAttendance, byGrade, totalStudents: students.length };
+  }, [students]);
 
   // Academic Report Stats
   const academicStats = useMemo(() => {
-    const totalExams = EXAMS_MOCK.length;
-    const completedExams = EXAMS_MOCK.filter(e => e.status === 'Completed' || e.status === 'Published').length;
+    const totalExams = exams.length;
+    const completedExams = exams.filter(e => e.status === 'Completed' || e.status === 'Published').length;
     
     // Calculate average scores
-    const avgScore = MARKS_MOCK.length > 0
-      ? MARKS_MOCK.reduce((sum, r) => sum + r.score, 0) / MARKS_MOCK.length
+    const avgScore = marks.length > 0
+      ? marks.reduce((sum, r) => sum + r.score, 0) / marks.length
       : 0;
 
     // Grade distribution
-    const gradeDistribution = MARKS_MOCK.reduce((acc, r) => {
+    const gradeDistribution = marks.reduce((acc, r) => {
       acc[r.grade] = (acc[r.grade] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Pass rate (assuming 40+ is pass)
-    const passCount = MARKS_MOCK.filter(r => r.score >= 40).length;
-    const passRate = MARKS_MOCK.length > 0 ? (passCount / MARKS_MOCK.length) * 100 : 0;
+    const passCount = marks.filter(r => r.score >= 40).length;
+    const passRate = marks.length > 0 ? (passCount / marks.length) * 100 : 0;
 
-    return { totalExams, completedExams, avgScore, gradeDistribution, passRate, totalResults: MARKS_MOCK.length };
-  }, []);
+    return { totalExams, completedExams, avgScore, gradeDistribution, passRate, totalResults: marks.length };
+  }, [exams, marks]);
 
   // Generate report data based on report type
   const getReportData = () => {
@@ -134,7 +136,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
             ['Average Attendance', `${studentStats.avgAttendance.toFixed(1)}%`],
           ],
           headers: ['ID', 'Name (English)', 'Name (Myanmar)', 'Grade', 'Status', 'Attendance %', 'Fees Pending', 'Phone'],
-          rows: STUDENTS_MOCK.map(s => [
+          rows: students.map(s => [
             s.id, s.nameEn, s.nameMm, s.grade.split('-')[0], s.status, 
             `${s.attendanceRate}%`, `${s.feesPending.toLocaleString()} MMK`, s.phone
           ]),
@@ -155,8 +157,8 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
             ['Students with Pending Fees', financeStats.studentsWithFees.toString()],
           ],
           headers: ['ID', 'Date', 'Category', 'Description', 'Vendor', 'Amount (MMK)', 'Status', 'Payment Method'],
-          rows: EXPENSES_MOCK.map(e => [
-            e.id, e.date, e.category, e.description, e.vendor || '-', 
+          rows: expenses.map(e => [
+            e.id, e.date, e.category, e.description, (e as any).vendor || (e as any).meta?.vendor || '-', 
             e.amount.toLocaleString(), e.status, e.paymentMethod
           ]),
           categoryBreakdown: Object.entries(financeStats.byCategory).map(([cat, amt]) => [cat, `${(amt as number).toLocaleString()} MMK`])
@@ -174,7 +176,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
             ['Poor (<75%)', attendanceStats.poorAttendance.toString()],
           ],
           headers: ['ID', 'Name (English)', 'Name (Myanmar)', 'Grade', 'Attendance Rate', 'Status', 'Phone'],
-          rows: STUDENTS_MOCK.map(s => [
+          rows: students.map(s => [
             s.id, s.nameEn, s.nameMm, s.grade.split('-')[0], 
             `${s.attendanceRate}%`, s.attendanceRate >= 90 ? 'Excellent' : s.attendanceRate >= 75 ? 'Good' : 'Needs Attention', s.phone
           ]),
@@ -194,7 +196,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
             ['Total Results', academicStats.totalResults.toString()],
           ],
           headers: ['Exam ID', 'Exam Name', 'Term', 'Academic Year', 'Start Date', 'End Date', 'Status'],
-          rows: EXAMS_MOCK.map(e => [
+          rows: exams.map(e => [
             e.id, e.name, e.term, e.academicYear, e.startDate, e.endDate, e.status
           ]),
           gradeDistribution: Object.entries(academicStats.gradeDistribution).map(([grade, count]) => [grade, count.toString()])
@@ -535,7 +537,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {STUDENTS_MOCK.slice(0, 5).map(student => (
+              {students.slice(0, 5).map(student => (
                 <tr key={student.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs">{student.id}</td>
                   <td className="px-4 py-3 font-semibold">{student.nameEn}</td>
@@ -721,7 +723,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {STUDENTS_MOCK.filter(s => s.attendanceRate < 80).slice(0, 5).map(student => (
+              {students.filter(s => s.attendanceRate < 80).slice(0, 5).map(student => (
                 <tr key={student.id} className="hover:bg-red-50/50">
                   <td className="px-4 py-3">
                     <p className="font-semibold">{student.nameEn}</p>
@@ -810,7 +812,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
             Recent Exams
           </h3>
           <div className="space-y-3">
-            {EXAMS_MOCK.slice(0, 4).map(exam => (
+            {exams.slice(0, 4).map(exam => (
               <div key={exam.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                 <div>
                   <p className="font-semibold text-slate-800">{exam.name}</p>
@@ -837,7 +839,7 @@ export const Reports: React.FC<ReportsProps> = ({ initialType = 'students' }) =>
           Subject Performance Overview
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {SUBJECTS_MOCK.slice(0, 4).map(subject => (
+          {subjects.slice(0, 4).map(subject => (
             <div key={subject.id} className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl">
               <p className="font-semibold text-slate-800 text-sm">{subject.nameEn}</p>
               <p className="text-xs text-slate-500 font-burmese">{subject.nameMm}</p>

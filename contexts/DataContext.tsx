@@ -1,5 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Student, Staff, Expense, Exam, ExamResult, TimetableEntry, ClassGroup, Room, Subject, FeeType } from '../types';
+import {
+  Student,
+  Staff,
+  Expense,
+  Exam,
+  ExamResult,
+  TimetableEntry,
+  ClassGroup,
+  Room,
+  Subject,
+  FeeType,
+  Payment,
+  StudentAttendanceDataset,
+  StaffAttendanceDataset,
+} from '../types';
 import { DataService } from '../services/dataService';
 
 interface DataContextType {
@@ -75,17 +89,17 @@ interface DataContextType {
   deleteFeeStructure: (id: string) => void;
   
   // Attendance
-  attendance: Record<string, any>;
-  setAttendance: (attendance: Record<string, any>) => void;
+  attendance: StudentAttendanceDataset;
+  setAttendance: (attendance: StudentAttendanceDataset) => void;
   
   // Staff Attendance
-  staffAttendance: Record<string, any>;
-  setStaffAttendance: (attendance: Record<string, any>) => void;
+  staffAttendance: StaffAttendanceDataset;
+  setStaffAttendance: (attendance: StaffAttendanceDataset) => void;
   
   // Payments
-  payments: any[];
-  setPayments: (payments: any[]) => void;
-  addPayment: (payment: any) => void;
+  payments: Payment[];
+  setPayments: (payments: Payment[]) => void;
+  addPayment: (payment: Payment) => void;
   
   // Sync
   refreshData: () => void;
@@ -117,9 +131,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [rooms, setRoomsState] = useState<Room[]>([]);
   const [subjects, setSubjectsState] = useState<Subject[]>([]);
   const [feeStructures, setFeeStructuresState] = useState<FeeType[]>([]);
-  const [attendance, setAttendanceState] = useState<Record<string, any>>({});
-  const [staffAttendance, setStaffAttendanceState] = useState<Record<string, any>>({});
-  const [payments, setPaymentsState] = useState<any[]>([]);
+  const [attendance, setAttendanceState] = useState<StudentAttendanceDataset>({});
+  const [staffAttendance, setStaffAttendanceState] = useState<StaffAttendanceDataset>({});
+  const [payments, setPaymentsState] = useState<Payment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Load initial data
@@ -439,22 +453,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setFeeStructuresState(DataService.getFeeStructures());
   };
 
-  const setAttendance = (newAttendance: Record<string, any>) => {
+  const setAttendance = (newAttendance: StudentAttendanceDataset) => {
     setAttendanceState(newAttendance);
     DataService.saveAttendance(newAttendance);
   };
 
-  const setStaffAttendance = (newAttendance: Record<string, any>) => {
+  const setStaffAttendance = (newAttendance: StaffAttendanceDataset) => {
     setStaffAttendanceState(newAttendance);
     DataService.saveStaffAttendance(newAttendance);
   };
 
-  const setPayments = (newPayments: any[]) => {
+  const setPayments = (newPayments: Payment[]) => {
     setPaymentsState(newPayments);
     DataService.savePayments(newPayments);
   };
 
-  const addPayment = (payment: any) => {
+  const addPayment = (payment: Payment) => {
     DataService.addPayment(payment);
     setPaymentsState(DataService.getPayments());
   };

@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import { STAFF_MOCK, calculateSSB } from '../constants';
-import { Staff } from '../types';
+import { calculateSSB } from '../constants';
+import { Expense, Staff } from '../types';
 import { Users, DollarSign, FileText, Download, UserPlus, X, Check, Printer, Wallet, AlertCircle } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 export const HR: React.FC = () => {
+  const { staff: staffList, addStaff, expenses, addExpense, deleteExpense } = useData();
+  const payrollMonth = new Date().toISOString().slice(0, 7); // yyyy-mm
+
   // --- State Management ---
-  const [staffList, setStaffList] = useState<Staff[]>(STAFF_MOCK);
-  
-  // Initialize payment status (Mocking some as Paid for the demo visual)
-  const [paymentStatus, setPaymentStatus] = useState<Record<string, boolean>>(
-    STAFF_MOCK.reduce((acc, staff) => ({...acc, [staff.id]: true}), {})
-  );
-  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPayslipOpen, setIsPayslipOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -35,8 +32,19 @@ export const HR: React.FC = () => {
     e.preventDefault();
     if (!newStaff.name || !newStaff.baseSalary) return;
 
+    const getNextStaffId = () => {
+      const nums = staffList
+        .map((s) => {
+          const m = String(s.id || '').match(/(\d+)/);
+          return m ? Number(m[1]) : NaN;
+        })
+        .filter((n) => Number.isFinite(n)) as number[];
+      const next = (nums.length ? Math.max(...nums) : 0) + 1;
+      return `TF-${String(next).padStart(3, '0')}`;
+    };
+
     const staff: Staff = {
-      id: `TF-${String(staffList.length + 1).padStart(3, '0')}`,
+      id: getNextStaffId(),
       name: newStaff.name,
       role: newStaff.role,
       department: newStaff.department,
@@ -44,14 +52,39 @@ export const HR: React.FC = () => {
       joinDate: new Date().toISOString().split('T')[0]
     };
 
-    setStaffList([...staffList, staff]);
-    setPaymentStatus(prev => ({...prev, [staff.id]: false})); // Default to pending for new staff
+    addStaff(staff);
     setIsAddModalOpen(false);
     setNewStaff({ name: '', role: '', department: 'Teaching', baseSalary: '' });
   };
 
-  const togglePayment = (id: string) => {
-    setPaymentStatus(prev => ({...prev, [id]: !prev[id]}));
+  const getPayrollExpenseId = (staffId: string, month: string) => `SAL-${staffId}-${month}`;
+
+  const isStaffPaidForMonth = (staffId: string, month: string): boolean => {
+    const id = getPayrollExpenseId(staffId, month);
+    return expenses.some((e) => e.id === id);
+  };
+
+  const togglePayment = (member: Staff) => {
+    const month = new Date().toISOString().slice(0, 7); // yyyy-mm
+    const id = getPayrollExpenseId(member.id, month);
+
+    if (isStaffPaidForMonth(member.id, month)) {
+      deleteExpense(id);
+      return;
+    }
+
+    const ssb = calculateSSB(member.baseSalary);
+    const netPay = member.baseSalary - ssb.employee;
+    const expense: Expense = {
+      id,
+      category: 'Salaries',
+      description: `Payroll (${month}) - ${member.name} (${member.id})`,
+      amount: netPay,
+      date: new Date().toISOString().slice(0, 10),
+      paymentMethod: 'Bank Transfer',
+      status: 'Paid',
+    };
+    addExpense(expense);
   };
 
   const handleExport = () => {
@@ -61,7 +94,8 @@ export const HR: React.FC = () => {
       ...staffList.map(staff => {
         const ssb = calculateSSB(staff.baseSalary);
         const net = staff.baseSalary - ssb.employee;
-        const status = paymentStatus[staff.id] ? "Paid" : "Pending";
+        const month = new Date().toISOString().slice(0, 7);
+        const status = isStaffPaidForMonth(staff.id, month) ? "Paid" : "Pending";
         return [
           staff.id, 
           `"${staff.name}"`, 
@@ -161,7 +195,8 @@ export const HR: React.FC = () => {
               {staffList.map(staff => {
                 const ssb = calculateSSB(staff.baseSalary);
                 const netPay = staff.baseSalary - ssb.employee;
-                const isPaid = paymentStatus[staff.id];
+                const month = new Date().toISOString().slice(0, 7);
+                const isPaid = isStaffPaidForMonth(staff.id, month);
                 
                 return (
                   <tr key={staff.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -185,7 +220,7 @@ export const HR: React.FC = () => {
                     <td className="px-8 py-5 text-sm font-bold text-brand-600">{netPay.toLocaleString()} MMK</td>
                     <td className="px-8 py-5">
                         <button 
-                          onClick={() => togglePayment(staff.id)}
+                          onClick={() => togglePayment(staff)}
                           className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             isPaid 
                             ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
@@ -363,7 +398,7 @@ export const HR: React.FC = () => {
                          <span className="text-sm text-slate-400 font-medium ml-2">MMK</span>
                        </p>
                     </div>
-                    {paymentStatus[selectedStaff.id] ? (
+                    {isStaffPaidForMonth(selectedStaff.id, payrollMonth) ? (
                        <div className="flex items-center space-x-2 text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-100">
                           <Check size={20} />
                           <span className="font-bold">Paid</span>

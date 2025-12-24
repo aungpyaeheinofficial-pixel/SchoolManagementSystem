@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { CLASSES_MOCK, TIME_SLOTS, SUBJECTS_MOCK, STAFF_MOCK, ROOMS_MOCK } from '../constants';
+import { TIME_SLOTS } from '../constants';
 import { TimetableEntry } from '../types';
 import { useData } from '../contexts/DataContext';
 import { 
@@ -40,14 +40,17 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
     updateTimetableEntry, 
     deleteTimetableEntry,
     copyWeekSchedule,
-    classes 
+    classes,
+    subjects,
+    staff,
+    rooms,
   } = useData();
 
   // Use context data instead of props
   const actualTimetable = timetable;
   const actualOnUpdate = setTimetable;
 
-  const [selectedClassId, setSelectedClassId] = useState(CLASSES_MOCK[0]?.id || '');
+  const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isWeekPickerOpen, setIsWeekPickerOpen] = useState(false);
   const [weekPickerDate, setWeekPickerDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -78,7 +81,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
   useModalScrollLock(isModalOpen || isPrintModalOpen || isCopyModalOpen || isWeekPickerOpen, { scrollToTopOnOpen: true });
 
   // Get class room
-  const selectedClass = CLASSES_MOCK.find(c => c.id === selectedClassId);
+  const selectedClass = classes.find(c => c.id === selectedClassId);
   const classRoomId = selectedClass?.roomId || '';
 
   // Show success message temporarily
@@ -98,7 +101,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
        t.id !== excludeEntryId
     );
     if (conflict) {
-      const conflictClass = CLASSES_MOCK.find(c => c.id === conflict.classId);
+      const conflictClass = classes.find(c => c.id === conflict.classId);
       return conflictClass?.name || 'Another class';
     }
     return null;
@@ -109,7 +112,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
     if (!roomId) return null;
     
     // Find other classes using the same room at the same time
-    const otherClasses = CLASSES_MOCK.filter(c => c.roomId === roomId && c.id !== classId);
+    const otherClasses = classes.filter(c => c.roomId === roomId && c.id !== classId);
     
     for (const otherClass of otherClasses) {
       const hasEntry = actualTimetable.find(t => 
@@ -155,9 +158,9 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
     );
   };
 
-  const getSubject = (id: string) => SUBJECTS_MOCK.find(s => s.id === id);
-  const getTeacher = (id: string) => STAFF_MOCK.find(s => s.id === id);
-  const getRoom = (id: string) => ROOMS_MOCK.find(r => r.id === id);
+  const getSubject = (id: string) => subjects.find(s => s.id === id);
+  const getTeacher = (id: string) => staff.find(s => s.id === id);
+  const getRoom = (id: string) => rooms.find(r => r.id === id);
 
   // Week navigation
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -348,7 +351,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
       showSuccess(`Template saved! ${sourceEntries.length} entries backed up.`);
     } else {
       // Copy to another class
-      const targetClass = CLASSES_MOCK.find(c => c.id === copyTargetClassId);
+      const targetClass = classes.find(c => c.id === copyTargetClassId);
       
       // Remove existing entries for target class
       const filteredTimetable = actualTimetable.filter(t => t.classId !== copyTargetClassId);
@@ -437,7 +440,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
         if (entry) {
           const subject = getSubject(entry.subjectId);
           const teacher = getTeacher(entry.teacherId);
-          const classInfo = CLASSES_MOCK.find(c => c.id === entry.classId);
+          const classInfo = classes.find(c => c.id === entry.classId);
           
           if (printTeacherId === 'all') {
             return `<td style="padding: 8px; border: 1px solid #ddd; text-align: center; background: #f8f9fa;">
@@ -571,7 +574,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                    onChange={(e) => setSelectedClassId(e.target.value)}
                    className="w-full pl-10 pr-10 py-3 bg-transparent text-sm font-bold text-slate-700 outline-none rounded-xl cursor-pointer appearance-none hover:bg-slate-50 transition-colors"
                 >
-                   {CLASSES_MOCK.map(cls => (
+                   {classes.map(cls => (
                       <option key={cls.id} value={cls.id}>{cls.name}</option>
                    ))}
                 </select>
@@ -805,7 +808,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                         className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
                      >
                         <option value="">Select Subject...</option>
-                        {SUBJECTS_MOCK.map(sub => (
+                        {subjects.map(sub => (
                            <option key={sub.id} value={sub.id}>{sub.code} - {sub.nameEn}</option>
                         ))}
                      </select>
@@ -820,8 +823,8 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                         className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
                      >
                         <option value="">Select Teacher...</option>
-                        {STAFF_MOCK.map(staff => (
-                           <option key={staff.id} value={staff.id}>{staff.name} ({staff.department})</option>
+                        {staff.map(member => (
+                           <option key={member.id} value={member.id}>{member.name} ({member.department})</option>
                         ))}
                      </select>
                      {formData.teacherId && (
@@ -889,8 +892,8 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                      >
                         <option value="all">📚 Current Class Timetable ({selectedClass?.name})</option>
                         <optgroup label="Individual Teacher Schedule">
-                          {STAFF_MOCK.map(staff => (
-                             <option key={staff.id} value={staff.id}>👤 {staff.name} ({staff.department})</option>
+                          {staff.map(member => (
+                             <option key={member.id} value={member.id}>👤 {member.name} ({member.department})</option>
                           ))}
                         </optgroup>
                      </select>
@@ -957,7 +960,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
                     >
                       <option value="">💾 Save as Template (for this class)</option>
                       <optgroup label="Copy to Another Class">
-                        {CLASSES_MOCK.filter(c => c.id !== selectedClassId).map(cls => (
+                        {classes.filter(c => c.id !== selectedClassId).map(cls => (
                           <option key={cls.id} value={cls.id}>📋 {cls.name}</option>
                         ))}
                       </optgroup>
@@ -966,7 +969,7 @@ export const AcademicTimetable: React.FC<AcademicTimetableProps> = ({ timetableD
 
                   <div className="p-4 bg-slate-50 rounded-xl text-sm text-slate-600">
                     {copyTargetClassId ? (
-                      <p>⚠️ This will <strong>replace</strong> all existing schedule entries for {CLASSES_MOCK.find(c => c.id === copyTargetClassId)?.name}.</p>
+                      <p>⚠️ This will <strong>replace</strong> all existing schedule entries for {classes.find(c => c.id === copyTargetClassId)?.name}.</p>
                     ) : (
                       <p>Save current schedule as a template. Use the <strong>Load</strong> button to restore it later.</p>
                     )}

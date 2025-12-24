@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   CheckCircle2,
@@ -9,18 +9,10 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { DateRangePicker, DateRange } from './DateRangePicker';
-import { CLASSES_MOCK } from '../constants';
+import { AttendanceStatus, StudentAttendanceDataset } from '../types';
+import { useData } from '../contexts/DataContext';
 
-// Mock Data matching the design requirements
-const CLASS_STUDENTS = [
-  { id: 'ST-2024-001', roll: 1, nameEn: 'Mg Aung Kyaw', nameMm: 'မောင်အောင်ကျော်', avatarColor: 'bg-blue-100 text-blue-600' },
-  { id: 'ST-2024-002', roll: 2, nameEn: 'Ma Hla Hla', nameMm: 'မလှလှ', avatarColor: 'bg-pink-100 text-pink-600' },
-  { id: 'ST-2024-003', roll: 3, nameEn: 'Mg Ba', nameMm: 'မောင်ဘ', avatarColor: 'bg-green-100 text-green-600' },
-  { id: 'ST-2024-004', roll: 4, nameEn: 'Ma Mya', nameMm: 'မမြ', avatarColor: 'bg-purple-100 text-purple-600' },
-  { id: 'ST-2024-005', roll: 5, nameEn: 'Mg Bo Bo', nameMm: 'မောင်ဘိုဘို', avatarColor: 'bg-orange-100 text-orange-600' },
-];
-
-type StatusType = 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE';
+type StatusType = AttendanceStatus;
 
 interface AttendanceRecord {
   status: StatusType;
@@ -32,21 +24,51 @@ interface AttendanceState {
 }
 
 export const Attendance: React.FC = () => {
+  const { classes, students, attendance: attendanceStore, setAttendance: setAttendanceStore } = useData();
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date()
   });
-  const [selectedClass, setSelectedClass] = useState(CLASSES_MOCK[0]?.name || '');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+
+  const dateKey = useMemo(() => {
+    const d = dateRange?.from ?? new Date();
+    return d.toISOString().slice(0, 10);
+  }, [dateRange?.from]);
+
+  useEffect(() => {
+    if (!selectedClassId && classes.length) {
+      setSelectedClassId(classes[0].id);
+    }
+  }, [classes, selectedClassId]);
+
+  const classStudents = useMemo(() => {
+    const cls = classes.find((c) => c.id === selectedClassId);
+    if (!cls) return [];
+    // Simple mapping: student.grade string often matches class.name
+    return students.filter((s) => s.grade === cls.name);
+  }, [classes, selectedClassId, students]);
   
   // Initialize all students as PRESENT
-  const [attendance, setAttendance] = useState<AttendanceState>(
-    CLASS_STUDENTS.reduce((acc, student) => ({
-      ...acc,
-      [student.id]: { status: 'PRESENT', remark: '' }
-    }), {} as AttendanceState)
-  );
+  const [attendance, setAttendance] = useState<AttendanceState>({});
   
   const [isSaving, setIsSaving] = useState(false);
+
+  // Load existing saved attendance for date+class into local editable state
+  useEffect(() => {
+    if (!selectedClassId) return;
+    const savedForClass = (attendanceStore?.[dateKey]?.[selectedClassId] || {}) as Record<
+      string,
+      { status: StatusType; remark: string }
+    >;
+
+    const next: AttendanceState = {};
+    for (const s of classStudents) {
+      next[s.id] = savedForClass[s.id] ?? { status: 'PRESENT', remark: '' };
+    }
+    setAttendance(next);
+  }, [attendanceStore, classStudents, dateKey, selectedClassId]);
 
   // Dynamic Stats Calculation
   const stats = useMemo(() => {
@@ -72,9 +94,21 @@ export const Attendance: React.FC = () => {
   };
 
   const handleSave = () => {
+    if (!selectedClassId) return;
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => setIsSaving(false), 1000);
+
+    const nextStore: StudentAttendanceDataset = {
+      ...(attendanceStore || {}),
+      [dateKey]: {
+        ...((attendanceStore && attendanceStore[dateKey]) || {}),
+        [selectedClassId]: Object.fromEntries(
+          Object.entries(attendance).map(([studentId, rec]) => [studentId, { status: rec.status, remark: rec.remark }])
+        ),
+      },
+    };
+
+    setAttendanceStore(nextStore);
+    setTimeout(() => setIsSaving(false), 400);
   };
 
   return (
@@ -98,12 +132,12 @@ export const Attendance: React.FC = () => {
              <div className="relative group hidden sm:block">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-brand-500 transition-colors" size={16} />
                 <select 
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
+                  value={selectedClassId}
+                  onChange={(e) => setSelectedClassId(e.target.value)}
                   className="pl-9 pr-8 py-2.5 bg-transparent text-sm font-bold text-slate-600 outline-none rounded-xl hover:bg-slate-50 transition-colors cursor-pointer appearance-none min-w-[180px] font-burmese"
                 >
-                  {CLASSES_MOCK.map((cls) => (
-                    <option key={cls.id} value={cls.name}>{cls.name}</option>
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -180,17 +214,17 @@ export const Attendance: React.FC = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-50">
-                  {CLASS_STUDENTS.map((student) => {
-                     const status = attendance[student.id].status;
+                 {classStudents.map((student, idx) => {
+                     const status = attendance[student.id]?.status || 'PRESENT';
                      
                      return (
                         <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
                            <td className="px-6 py-5 text-center font-bold text-slate-400">
-                              {student.roll.toString().padStart(2, '0')}
+                              {(idx + 1).toString().padStart(2, '0')}
                            </td>
                            <td className="px-6 py-5">
                               <div className="flex items-center gap-4">
-                                 <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm ${student.avatarColor} border-2 border-white shadow-sm`}>
+                                 <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm bg-brand-50 text-brand-600 border-2 border-white shadow-sm">
                                     {student.nameEn.charAt(0)}
                                  </div>
                                  <div>
@@ -247,7 +281,7 @@ export const Attendance: React.FC = () => {
                               <input 
                                  type="text" 
                                  placeholder="Add Note..." 
-                                 value={attendance[student.id].remark}
+                                 value={attendance[student.id]?.remark || ''}
                                  onChange={(e) => handleRemarkChange(student.id, e.target.value)}
                                  className="w-full bg-transparent border-b border-slate-200 py-1 text-sm text-slate-600 focus:border-brand-500 outline-none placeholder-slate-300 transition-colors"
                               />

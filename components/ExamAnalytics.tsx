@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { EXAMS_MOCK, CLASSES_MOCK, SUBJECTS_MOCK, STUDENTS_MOCK, MARKS_MOCK } from '../constants';
-import { Exam, ExamResult, Student } from '../types';
+import { Student } from '../types';
 import { useData } from '../contexts/DataContext';
 import { 
   BarChart3, TrendingUp, Users, Trophy, Medal, Target, 
@@ -34,15 +33,15 @@ interface Notification {
 }
 
 export const ExamAnalytics: React.FC = () => {
-  const { exams: contextExams, marks: contextMarks, students: contextStudents } = useData();
-  
-  const exams = contextExams.length > 0 ? contextExams : EXAMS_MOCK;
-  const marks = contextMarks.length > 0 ? contextMarks : MARKS_MOCK;
-  const students = contextStudents.length > 0 ? contextStudents : STUDENTS_MOCK;
+  const { exams, marks, students, classes, subjects } = useData();
 
   const [activeTab, setActiveTab] = useState<TabType>('analytics');
   const [selectedExamId, setSelectedExamId] = useState<string>(exams[0]?.id || '');
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
+  useEffect(() => {
+    if (!selectedExamId && exams.length) setSelectedExamId(exams[0].id);
+  }, [exams, selectedExamId]);
+
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -97,7 +96,7 @@ export const ExamAnalytics: React.FC = () => {
     const examMarks = getExamMarks(selectedExamId);
     const classStats = new Map<string, { total: number; count: number; pass: number; fail: number }>();
 
-    CLASSES_MOCK.forEach(cls => {
+    classes.forEach(cls => {
       classStats.set(cls.id, { total: 0, count: 0, pass: 0, fail: 0 });
     });
 
@@ -111,9 +110,7 @@ export const ExamAnalytics: React.FC = () => {
       const isPass = studentMarks.every(m => m.score >= 40);
 
       // Find class by grade matching
-      const classId = CLASSES_MOCK.find(c => 
-        c.name.includes(student.grade.replace(' (A)', '').replace(' (B)', ''))
-      )?.id;
+      const classId = classes.find(c => c.name === student.grade)?.id;
 
       if (classId) {
         const stats = classStats.get(classId)!;
@@ -125,7 +122,7 @@ export const ExamAnalytics: React.FC = () => {
       }
     });
 
-    return CLASSES_MOCK.map(cls => {
+    return classes.map(cls => {
       const stats = classStats.get(cls.id)!;
       return {
         id: cls.id,
@@ -138,7 +135,7 @@ export const ExamAnalytics: React.FC = () => {
         passRate: stats.count > 0 ? Math.round((stats.pass / stats.count) * 100) : 0
       };
     }).filter(c => c.total > 0);
-  }, [selectedExamId, marks, students]);
+  }, [selectedExamId, marks, students, classes]);
 
   // Subject-wise Performance
   const subjectPerformance = useMemo(() => {
@@ -155,7 +152,7 @@ export const ExamAnalytics: React.FC = () => {
     });
 
     return Array.from(subjectStats.entries()).map(([subjectId, stats]) => {
-      const subject = SUBJECTS_MOCK.find(s => s.id === subjectId);
+      const subject = subjects.find(s => s.id === subjectId);
       return {
         id: subjectId,
         name: subject?.code || subjectId,
@@ -166,7 +163,7 @@ export const ExamAnalytics: React.FC = () => {
         students: stats.count
       };
     }).sort((a, b) => b.average - a.average);
-  }, [selectedExamId, marks]);
+  }, [selectedExamId, marks, subjects]);
 
   // Student Rank List
   const studentRankList = useMemo(() => {
@@ -198,12 +195,12 @@ export const ExamAnalytics: React.FC = () => {
         };
       })
       .filter(r => selectedClassId === 'all' || 
-        r.student?.grade.includes(CLASSES_MOCK.find(c => c.id === selectedClassId)?.gradeLevel || ''))
+        r.student?.grade.includes(classes.find(c => c.id === selectedClassId)?.gradeLevel || ''))
       .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, rank: index + 1 }));
 
     return ranked;
-  }, [selectedExamId, marks, students, selectedClassId]);
+  }, [selectedExamId, marks, students, selectedClassId, classes]);
 
   // Pass/Fail Ratio
   const passFailRatio = useMemo(() => {
@@ -353,7 +350,7 @@ export const ExamAnalytics: React.FC = () => {
                 className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer min-w-[150px]"
               >
                 <option value="all">All Classes</option>
-                {CLASSES_MOCK.map(cls => (
+                {classes.map(cls => (
                   <option key={cls.id} value={cls.id}>{cls.name}</option>
                 ))}
               </select>

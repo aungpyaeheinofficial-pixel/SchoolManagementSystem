@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { EXAMS_MOCK, CLASSES_MOCK, SUBJECTS_MOCK, STUDENTS_MOCK, MARKS_MOCK } from '../constants';
 import { ExamResult, Student } from '../types';
 import { 
   FileText, Search, Filter, Download, Printer, X, 
@@ -8,41 +7,36 @@ import {
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
+import { useData } from '../contexts/DataContext';
 
 export const ExamReportCards: React.FC = () => {
-  const [selectedExamId, setSelectedExamId] = useState<string>(EXAMS_MOCK[0].id);
-  const [selectedClassId, setSelectedClassId] = useState<string>(CLASSES_MOCK[2].id); // Grade 10 A
+  const { exams, classes, subjects, students, marks } = useData();
+
+  const [selectedExamId, setSelectedExamId] = useState<string>(exams[0]?.id || '');
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   // --- Derived Data & Calculations ---
 
-  const selectedClass = CLASSES_MOCK.find(c => c.id === selectedClassId);
-  const selectedExam = EXAMS_MOCK.find(e => e.id === selectedExamId);
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+  const selectedExam = exams.find(e => e.id === selectedExamId);
 
   // Filter students by class and search
   const classStudents = useMemo(() => {
-    return STUDENTS_MOCK.filter(s => {
-      // Basic Grade matching logic (Mock specific)
-      const matchesClass = selectedClass?.name.includes("Grade 10") 
-        ? s.grade.includes("Grade 10") 
-        : selectedClass?.name.includes("Grade 9")
-          ? s.grade.includes("Grade 9")
-          : selectedClass?.name.includes("Grade 11")
-            ? s.grade.includes("Grade 11")
-            : true; 
-      
+    return students.filter(s => {
+      const matchesClass = selectedClass ? s.grade === selectedClass.name : true;
       const matchesSearch = 
         s.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.id.toLowerCase().includes(searchTerm.toLowerCase());
       
       return matchesClass && matchesSearch;
     });
-  }, [selectedClassId, searchTerm, selectedClass]);
+  }, [searchTerm, selectedClass, students]);
 
   // Helper: Get Marks for a student
   const getStudentMarks = (studentId: string) => {
-    return MARKS_MOCK.filter(m => m.examId === selectedExamId && m.studentId === studentId);
+    return marks.filter(m => m.examId === selectedExamId && m.studentId === studentId);
   };
 
   // Helper: Calculate Stats (Total, Avg, Result)
@@ -84,7 +78,7 @@ export const ExamReportCards: React.FC = () => {
   // --- Modal Logic ---
   
   const getSubjectDetails = (subjectId: string) => {
-    return SUBJECTS_MOCK.find(s => s.id === subjectId);
+    return subjects.find(s => s.id === subjectId);
   };
 
   const handlePrint = () => {
@@ -940,7 +934,7 @@ export const ExamReportCards: React.FC = () => {
                     onChange={(e) => setSelectedExamId(e.target.value)}
                     className="w-full pl-10 pr-8 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer appearance-none"
                 >
-                    {EXAMS_MOCK.map(exam => (
+                    {exams.map(exam => (
                         <option key={exam.id} value={exam.id}>{exam.name}</option>
                     ))}
                 </select>
@@ -958,7 +952,7 @@ export const ExamReportCards: React.FC = () => {
                     onChange={(e) => setSelectedClassId(e.target.value)}
                     className="w-full pl-10 pr-8 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer appearance-none"
                 >
-                    {CLASSES_MOCK.map(cls => (
+                    {classes.map(cls => (
                         <option key={cls.id} value={cls.id}>{cls.name}</option>
                     ))}
                 </select>

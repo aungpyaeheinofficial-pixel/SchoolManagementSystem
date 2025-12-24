@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
   Users,
@@ -10,9 +10,10 @@ import {
   ChevronDown,
   Building2
 } from 'lucide-react';
-import { STAFF_MOCK } from '../constants';
+import { AttendanceStatus, StaffAttendanceDataset } from '../types';
+import { useData } from '../contexts/DataContext';
 
-type StatusType = 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE';
+type StatusType = AttendanceStatus;
 
 interface StaffAttendanceRecord {
   status: StatusType;
@@ -26,29 +27,40 @@ interface StaffAttendanceState {
 }
 
 export const StaffAttendance: React.FC = () => {
+  const { staff, staffAttendance: staffAttendanceStore, setStaffAttendance: setStaffAttendanceStore } = useData();
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedDept, setSelectedDept] = useState('All Departments');
   
   // Initialize all staff as PRESENT with default 8:00 AM - 4:00 PM times
-  const [attendance, setAttendance] = useState<StaffAttendanceState>(
-    STAFF_MOCK.reduce((acc, staff) => ({
-      ...acc,
-      [staff.id]: { 
-        status: 'PRESENT', 
-        checkIn: '08:00',
-        checkOut: '16:00',
-        remark: '' 
-      }
-    }), {} as StaffAttendanceState)
-  );
+  const [attendance, setAttendance] = useState<StaffAttendanceState>({});
   
   const [isSaving, setIsSaving] = useState(false);
 
   // Filter staff by department
   const filteredStaff = useMemo(() => {
-     if (selectedDept === 'All Departments') return STAFF_MOCK;
-     return STAFF_MOCK.filter(s => s.department === selectedDept);
-  }, [selectedDept]);
+     if (selectedDept === 'All Departments') return staff;
+     return staff.filter(s => s.department === selectedDept);
+  }, [selectedDept, staff]);
+
+  // Load existing saved staff attendance for the date into local editable state
+  useEffect(() => {
+    const savedForDate = (staffAttendanceStore?.[selectedDate] || {}) as Record<
+      string,
+      { status: StatusType; checkIn: string; checkOut: string; remark: string }
+    >;
+
+    const next: StaffAttendanceState = {};
+    for (const s of staff) {
+      next[s.id] = savedForDate[s.id] ?? {
+        status: 'PRESENT',
+        checkIn: '08:00',
+        checkOut: '16:00',
+        remark: '',
+      };
+    }
+    setAttendance(next);
+  }, [selectedDate, staff, staffAttendanceStore]);
 
   // Dynamic Stats Calculation
   const stats = useMemo(() => {
@@ -77,8 +89,24 @@ export const StaffAttendance: React.FC = () => {
 
   const handleSave = () => {
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => setIsSaving(false), 1000);
+
+    const nextStore: StaffAttendanceDataset = {
+      ...(staffAttendanceStore || {}),
+      [selectedDate]: Object.fromEntries(
+        Object.entries(attendance).map(([staffId, rec]) => [
+          staffId,
+          {
+            status: rec.status,
+            checkIn: rec.checkIn,
+            checkOut: rec.checkOut,
+            remark: rec.remark || '',
+          },
+        ])
+      ),
+    };
+    setStaffAttendanceStore(nextStore);
+
+    setTimeout(() => setIsSaving(false), 400);
   };
 
   return (

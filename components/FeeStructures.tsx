@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FEE_STRUCTURES_MOCK, GRADE_LEVELS_LIST } from '../constants';
+import { GRADE_LEVELS_LIST } from '../constants';
 import { FeeType } from '../types';
 import { 
   Plus, Search, Edit3, Trash2, X, MoreHorizontal, 
@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { ModalPortal } from './ModalPortal';
+import { useData } from '../contexts/DataContext';
 
 export const FeeStructures: React.FC = () => {
-  // State
-  const [fees, setFees] = useState<FeeType[]>(FEE_STRUCTURES_MOCK);
+  const { feeStructures: fees, addFeeStructure, updateFeeStructure, deleteFeeStructure } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterFreq, setFilterFreq] = useState('All');
   
@@ -102,21 +102,21 @@ export const FeeStructures: React.FC = () => {
     if (!formData.nameEn || !formData.amount) return;
 
     if (editingId) {
-      setFees(prev => prev.map(f => f.id === editingId ? { ...f, ...formData } as FeeType : f));
+      updateFeeStructure(editingId, { ...formData } as FeeType);
     } else {
       const newFee: FeeType = {
         ...formData,
         id: `FEE-${Date.now()}`,
         isActive: true
       } as FeeType;
-      setFees([...fees, newFee]);
+      addFeeStructure(newFee);
     }
     handleCloseModal();
   };
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this fee structure? This cannot be undone.')) {
-      setFees(prev => prev.filter(f => f.id !== id));
+      deleteFeeStructure(id);
     }
   };
 
