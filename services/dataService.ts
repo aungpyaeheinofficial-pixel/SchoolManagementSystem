@@ -111,15 +111,38 @@ export class DataService {
   }
 
   static async pushToServer(): Promise<{ version: number }> {
-    const baseVersion = this.getLocalServerVersion();
     const data = JSON.parse(this.exportAllData());
-    const res = await apiFetch<{ version: number }>('/api/sync/push', {
-      method: 'POST',
-      auth: true,
-      body: JSON.stringify({ baseVersion, data }),
-    });
-    if (typeof res?.version === 'number') this.setLocalServerVersion(res.version);
-    return { version: res?.version || baseVersion };
+
+    const attempt = async (baseVersion: number) => {
+      const res = await apiFetch<{ version: number }>('/api/sync/push', {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({ baseVersion, data }),
+      });
+      if (typeof res?.version === 'number') this.setLocalServerVersion(res.version);
+      return { version: res?.version || baseVersion };
+    };
+
+    const baseVersion = this.getLocalServerVersion();
+    try {
+      return await attempt(baseVersion);
+    } catch (e: any) {
+      // If another device/tab pushed first, we may hit a 409 conflict.
+      // In that case, refresh the server version and retry once using the latest version,
+      // so this client can push its current local state.
+      const msg = String(e?.message || '');
+      if (msg.includes('API 409')) {
+        const latest = await this.peekServerVersion();
+        this.setLocalServerVersion(latest.version);
+        return await attempt(latest.version);
+      }
+      throw e;
+    }
+  }
+
+  static async peekServerVersion(): Promise<{ version: number }> {
+    const res = await apiFetch<{ version: number }>('/api/sync/pull', { auth: true });
+    return { version: res?.version || 0 };
   }
 
   private static syncTimer: number | null = null;
