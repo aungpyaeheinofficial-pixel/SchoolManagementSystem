@@ -13,22 +13,6 @@ const STEPS = [
   { id: 4, label: 'Documents', labelMm: 'စာရွက်စာတမ်း' }
 ];
 
-const GRADES_LIST = [
-  { id: 'kg', label: 'KG (သူငယ်တန်း)', fee: 30000 },
-  { id: 'g1', label: 'Grade 1 (ပထမတန်း)', fee: 35000 },
-  { id: 'g2', label: 'Grade 2 (ဒုတိယတန်း)', fee: 35000 },
-  { id: 'g3', label: 'Grade 3 (တတိယတန်း)', fee: 35000 },
-  { id: 'g4', label: 'Grade 4 (စတုတ္ထတန်း)', fee: 40000 },
-  { id: 'g5', label: 'Grade 5 (ပဉ္စမတန်း)', fee: 40000 },
-  { id: 'g6', label: 'Grade 6 (ဆဋ္ဌမတန်း)', fee: 45000 },
-  { id: 'g7', label: 'Grade 7 (သတ္တမတန်း)', fee: 45000 },
-  { id: 'g8', label: 'Grade 8 (အဋ္ဌမတန်း)', fee: 45000 },
-  { id: 'g9', label: 'Grade 9 (နဝမတန်း)', fee: 50000 },
-  { id: 'g10', label: 'Grade 10 (ဒသမတန်း - Old Curriculum)', fee: 50000 },
-  { id: 'g11', label: 'Grade 11 (ဧကာဒသမတန်း)', fee: 55000 },
-  { id: 'g12', label: 'Grade 12 (ဒွါဒသမတန်း)', fee: 60000 },
-];
-
 import type { Student } from '../types';
 
 interface AdmissionsProps {
@@ -37,7 +21,7 @@ interface AdmissionsProps {
 }
 
 export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose }) => {
-  const { addStudent } = useData();
+  const { addStudent, classes } = useData();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -127,8 +111,60 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
     prevGrade: '',
   });
 
+  const gradeRank = (text: string) => {
+    const lower = String(text || '').toLowerCase();
+    if (lower === 'kg' || lower.startsWith('kg ')) return 0;
+    const match = lower.match(/grade\s*(\d{1,2})/);
+    return match ? parseInt(match[1], 10) : 99;
+  };
+
+  // Grade levels and sections should come from the DB-backed ClassGroup list
+  const gradeLevelOptions = useMemo(() => {
+    const uniq = Array.from(new Set(classes.map((c) => String(c.gradeLevel || '').trim()).filter(Boolean)));
+    return uniq.sort((a, b) => gradeRank(a) - gradeRank(b));
+  }, [classes]);
+
+  const sectionOptions = useMemo(() => {
+    if (!formData.grade) return [];
+    const sections = classes
+      .filter((c) => String(c.gradeLevel || '').trim() === String(formData.grade).trim())
+      .map((c) => String(c.section || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(sections)).sort((a, b) => a.localeCompare(b));
+  }, [classes, formData.grade]);
+
+  const selectedClass = useMemo(() => {
+    if (!formData.grade) return null;
+    const gradeLevel = String(formData.grade).trim();
+    const section = String(formData.section || '').trim();
+    if (!section) {
+      // If only one section exists for this grade, auto-select that class (for display)
+      const matches = classes.filter((c) => String(c.gradeLevel || '').trim() === gradeLevel);
+      return matches.length === 1 ? matches[0] : null;
+    }
+    return (
+      classes.find(
+        (c) => String(c.gradeLevel || '').trim() === gradeLevel && String(c.section || '').trim() === section
+      ) || null
+    );
+  }, [classes, formData.grade, formData.section]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    // Special handling: when grade changes, reset section (and auto-pick if only one available)
+    if (name === 'grade') {
+      const nextGrade = value;
+      const nextSections = Array.from(
+        new Set(
+          classes
+            .filter((c) => String(c.gradeLevel || '').trim() === String(nextGrade).trim())
+            .map((c) => String(c.section || '').trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b));
+      setFormData((prev) => ({ ...prev, grade: nextGrade, section: nextSections.length === 1 ? nextSections[0] : '' }));
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -156,12 +192,14 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
     setSuccess(true);
     // Map form data to Student shape and persist
     const newStudentId = formData.admissionNo || `ST-${Date.now()}`;
+    const resolvedClassName = selectedClass?.name || formData.grade || '';
     const newStudent: Student = {
       id: newStudentId,
       nameEn: formData.nameEn || 'New Student',
       nameMm: formData.nameMm || '',
       fatherName: formData.fatherName || '',
-      grade: formData.grade || '',
+      // IMPORTANT: store the selected class display name so other screens can match students to classes
+      grade: resolvedClassName,
       nrc: formData.nrc || '',
       dob: formData.dob || '',
       status: 'Active',
@@ -207,8 +245,6 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
   // --- Render Steps ---
 
   const renderStep1 = () => {
-    const selectedGradeInfo = GRADES_LIST.find(g => g.label === formData.grade);
-
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
@@ -249,9 +285,9 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
                 className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 outline-none transition-all"
               >
                 <option value="">Select Grade</option>
-                {GRADES_LIST.map((grade) => (
-                  <option key={grade.id} value={grade.label}>
-                    {grade.label}
+                {gradeLevelOptions.map((gradeLevel) => (
+                  <option key={gradeLevel} value={gradeLevel}>
+                    {gradeLevel}
                   </option>
                 ))}
               </select>
@@ -269,23 +305,26 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
                 }`}
               >
                 <option value="">Select Section</option>
-                <option>A</option>
-                <option>B</option>
-                <option>C</option>
-                <option>D</option>
+                {sectionOptions.map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
           
-          {selectedGradeInfo && (
+          {selectedClass && (
             <div className="mt-6 flex items-start gap-3 p-4 bg-indigo-50 text-indigo-800 rounded-xl border border-indigo-100 animate-fade-in">
                <div className="p-1 bg-white rounded-full text-indigo-600 shadow-sm mt-0.5">
                  <Info size={16} />
                </div>
                <div>
-                  <p className="text-sm font-bold text-indigo-900">Tuition Fee Info</p>
+                  <p className="text-sm font-bold text-indigo-900">Selected Class</p>
                   <p className="text-sm opacity-90 mt-1">
-                     Monthly fee for <span className="font-bold">{selectedGradeInfo.label}</span> is <span className="font-bold text-lg ml-1 font-mono">{selectedGradeInfo.fee.toLocaleString()} MMK</span>.
+                    <span className="font-bold">{selectedClass.name}</span>
+                    {selectedClass.teacherName ? <span> • Teacher: <span className="font-semibold">{selectedClass.teacherName}</span></span> : null}
+                    {selectedClass.roomName ? <span> • Room: <span className="font-semibold">{selectedClass.roomName}</span></span> : null}
                   </p>
                </div>
             </div>
