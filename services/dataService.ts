@@ -146,14 +146,34 @@ export class DataService {
   }
 
   private static syncTimer: number | null = null;
+  private static syncInFlight = false;
+  private static syncPending = false;
   static startAutoSync(): void {
     if (!this.isBackendSyncEnabled()) return;
+
+    const run = () => {
+      if (this.syncInFlight) {
+        this.syncPending = true;
+        return;
+      }
+      this.syncInFlight = true;
+      this.pushToServer()
+        .catch((e) => console.warn('Auto-sync failed:', e))
+        .finally(() => {
+          this.syncInFlight = false;
+          if (this.syncPending) {
+            this.syncPending = false;
+            // run one more time to capture any changes that happened mid-sync
+            run();
+          }
+        });
+    };
 
     const schedule = () => {
       if (this.syncTimer) window.clearTimeout(this.syncTimer);
       this.syncTimer = window.setTimeout(() => {
-        this.pushToServer().catch((e) => console.warn('Auto-sync failed:', e));
-      }, 1200);
+        run();
+      }, 2000);
     };
 
     window.addEventListener('dataUpdated', schedule as any);
