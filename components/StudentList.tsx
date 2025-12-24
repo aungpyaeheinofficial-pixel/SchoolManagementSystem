@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { GRADE_LEVELS_LIST } from '../constants';
 import { 
   Search, Filter, MoreHorizontal, FileDown, Phone, UserPlus, Eye, Edit, Trash2, X, 
   ChevronDown, ChevronUp, CheckSquare, Square, Download, Mail, User, Calendar,
@@ -16,7 +15,7 @@ interface StudentListProps {
 }
 
 export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
-  const { students, setStudents, addStudent, updateStudent, deleteStudent } = useData();
+  const { students, addStudent, updateStudent, deleteStudent, classes } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -58,6 +57,46 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
   // Hover tooltip state
   const [hoveredStudentId, setHoveredStudentId] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const gradeRank = (text: string) => {
+    const lower = String(text || '').toLowerCase();
+    if (lower === 'kg' || lower.startsWith('kg ')) return 0;
+    const match = lower.match(/grade\s*(\d{1,2})/);
+    return match ? parseInt(match[1], 10) : 99;
+  };
+
+  const getGradeLevelLabel = (gradeLevel: string) => {
+    const gl = String(gradeLevel || '').trim();
+    const cls = classes.find((c) => String(c.gradeLevel || '').trim() === gl);
+    const name = String(cls?.name || '').trim();
+    if (!name) return gl;
+    const parts = name.split(' - ');
+    if (parts.length >= 2) {
+      const mm = parts.slice(1).join(' - ').trim();
+      return mm ? `${gl} (${mm})` : gl;
+    }
+    return name;
+  };
+
+  const gradeFilterOptions = useMemo(() => {
+    const uniq = Array.from(new Set(classes.map((c) => String(c.gradeLevel || '').trim()).filter(Boolean)));
+    return uniq
+      .sort((a, b) => gradeRank(a) - gradeRank(b))
+      .map((value) => ({ value, label: getGradeLevelLabel(value) }));
+  }, [classes]);
+
+  const classNameOptions = useMemo(() => {
+    // Student.grade stores the class display name (ClassGroup.name), so options should be class names.
+    const names = classes.map((c) => String(c.name || '').trim()).filter(Boolean);
+    const uniq = Array.from(new Set(names));
+    return uniq.sort((a, b) => {
+      const aBase = a.match(/^(KG|Grade \d+)/)?.[0] || a;
+      const bBase = b.match(/^(KG|Grade \d+)/)?.[0] || b;
+      const aRank = gradeRank(aBase);
+      const bRank = gradeRank(bBase);
+      if (aRank !== bRank) return aRank - bRank;
+      return a.localeCompare(b);
+    });
+  }, [classes]);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const advancedSearchRef = useRef<HTMLDivElement>(null);
@@ -422,8 +461,10 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
             onChange={(e) => setGradeFilter(e.target.value)}
           >
               <option value="All">All Grades (အားလုံးသော အတန်းများ)</option>
-              {GRADE_LEVELS_LIST.map(g => (
-                <option key={g} value={g}>{g}</option>
+              {gradeFilterOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
           </select>
           </div>
@@ -906,8 +947,10 @@ const StudentModal: React.FC<{
               className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60"
             >
               <option value="">Select Grade</option>
-              {GRADE_LEVELS_LIST.map(g => (
-                <option key={g} value={g}>{g}</option>
+              {classNameOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
               ))}
             </select>
           </div>

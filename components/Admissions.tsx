@@ -118,10 +118,28 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
     return match ? parseInt(match[1], 10) : 99;
   };
 
+  const getGradeLevelLabel = (gradeLevel: string) => {
+    const gl = String(gradeLevel || '').trim();
+    const cls = classes.find((c) => String(c.gradeLevel || '').trim() === gl);
+    const name = String(cls?.name || '').trim();
+    if (!name) return gl;
+    // Prefer Burmese-friendly label:
+    // - If class name has " - <myanmar>" use "Grade X (<myanmar>)"
+    // - Else keep the original name (often "Grade 1 (ပထမတန်း)")
+    const parts = name.split(' - ');
+    if (parts.length >= 2) {
+      const mm = parts.slice(1).join(' - ').trim();
+      return mm ? `${gl} (${mm})` : gl;
+    }
+    return name;
+  };
+
   // Grade levels and sections should come from the DB-backed ClassGroup list
   const gradeLevelOptions = useMemo(() => {
     const uniq = Array.from(new Set(classes.map((c) => String(c.gradeLevel || '').trim()).filter(Boolean)));
-    return uniq.sort((a, b) => gradeRank(a) - gradeRank(b));
+    return uniq
+      .sort((a, b) => gradeRank(a) - gradeRank(b))
+      .map((value) => ({ value, label: getGradeLevelLabel(value) }));
   }, [classes]);
 
   const sectionOptions = useMemo(() => {
@@ -285,9 +303,9 @@ export const Admissions: React.FC<AdmissionsProps> = ({ onSubmitStudent, onClose
                 className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 outline-none transition-all"
               >
                 <option value="">Select Grade</option>
-                {gradeLevelOptions.map((gradeLevel) => (
-                  <option key={gradeLevel} value={gradeLevel}>
-                    {gradeLevel}
+                {gradeLevelOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
