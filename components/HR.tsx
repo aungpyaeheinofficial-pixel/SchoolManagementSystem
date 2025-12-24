@@ -124,6 +124,123 @@ export const HR: React.FC = () => {
     setIsPayslipOpen(true);
   };
 
+  const getPayrollMonthLabel = (month: string) => {
+    try {
+      const d = new Date(`${month}-01T00:00:00`);
+      return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    } catch {
+      return month;
+    }
+  };
+
+  const openPrintWindow = (title: string, bodyHtml: string, autoPrint = true) => {
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) {
+      alert('Popup blocked. Please allow popups to print/download.');
+      return;
+    }
+    w.document.open();
+    w.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${title}</title>
+          <style>
+            :root { color-scheme: light; }
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Myanmar", "Noto Sans", sans-serif; margin: 0; padding: 24px; color: #0f172a; }
+            .card { max-width: 820px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; }
+            .header { background: #7c3aed; color: white; padding: 24px; position: relative; }
+            .title { font-size: 22px; font-weight: 800; margin: 0; }
+            .subtitle { opacity: .85; margin: 4px 0 0; }
+            .staff { margin-top: 16px; font-weight: 700; }
+            .staff small { display:block; font-weight:600; opacity:.85; margin-top: 2px; }
+            .content { padding: 24px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            .box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
+            .box.red { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
+            .row { display:flex; justify-content:space-between; align-items:center; gap: 12px; }
+            .label { font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+            .value { font-weight: 800; }
+            .divider { border-top: 1px dashed #cbd5e1; margin: 20px 0; }
+            .net { display:flex; justify-content:space-between; align-items:flex-end; gap: 12px; }
+            .net .amount { font-size: 28px; font-weight: 900; color: #7c3aed; }
+            .chip { display:inline-flex; align-items:center; gap:8px; border-radius: 999px; padding: 8px 12px; font-weight: 800; font-size: 12px; border: 1px solid #e2e8f0; background: #f1f5f9; color: #475569; }
+            .chip.paid { background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
+            @media print {
+              body { padding: 0; }
+              .card { border: none; border-radius: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          ${bodyHtml}
+          ${autoPrint ? `<script>window.onload = () => { window.focus(); window.print(); };</script>` : ''}
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
+
+  const printPayslip = (staff: Staff, asPdf: boolean) => {
+    const ssb = calculateSSB(staff.baseSalary);
+    const netPay = staff.baseSalary - ssb.employee;
+    const monthLabel = getPayrollMonthLabel(payrollMonth);
+    const statusPaid = isStaffPaidForMonth(staff.id, payrollMonth);
+
+    const html = `
+      <div class="card">
+        <div class="header">
+          <h1 class="title">Payslip</h1>
+          <p class="subtitle">${monthLabel}</p>
+          <div class="staff">
+            ${staff.name}
+            <small>${staff.role} • ${staff.id}</small>
+          </div>
+        </div>
+        <div class="content">
+          <div class="grid">
+            <div>
+              <div class="label" style="margin-bottom:10px;">Earnings</div>
+              <div class="box">
+                <div class="row"><span>Base Salary</span><span class="value">${staff.baseSalary.toLocaleString()}</span></div>
+              </div>
+              <div style="height:10px"></div>
+              <div class="box">
+                <div class="row"><span>Overtime</span><span class="value">0</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:10px;">Deductions</div>
+              <div class="box red">
+                <div class="row"><span>SSB (2%)</span><span class="value">-${ssb.employee.toLocaleString()}</span></div>
+              </div>
+              <div style="height:10px"></div>
+              <div class="box">
+                <div class="row"><span>Tax</span><span class="value">0</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="net">
+            <div>
+              <div class="label">Net Payable</div>
+              <div class="amount">${netPay.toLocaleString()} <span style="font-size:12px; color:#94a3b8; font-weight:800;">MMK</span></div>
+            </div>
+            <div class="chip ${statusPaid ? 'paid' : ''}">${statusPaid ? 'Paid' : 'Pending'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const safeName = (staff.name || staff.id || 'payslip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
+    const title = `${safeName}_payslip_${payrollMonth}${asPdf ? '_PDF' : ''}`;
+    openPrintWindow(title, html, true);
+  };
+
   return (
     <div className="space-y-8 animate-fade-in relative">
       {/* Header */}
@@ -414,11 +531,17 @@ export const HR: React.FC = () => {
 
               {/* Slip Footer */}
               <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
-                 <button className="flex items-center space-x-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-colors shadow-sm">
+                 <button
+                   onClick={() => printPayslip(selectedStaff, false)}
+                   className="flex items-center space-x-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-colors shadow-sm"
+                 >
                     <Printer size={18} />
                     <span>Print</span>
                  </button>
-                 <button className="flex items-center space-x-2 px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-600/20 hover:bg-brand-500 transition-colors">
+                 <button
+                   onClick={() => printPayslip(selectedStaff, true)}
+                   className="flex items-center space-x-2 px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-600/20 hover:bg-brand-500 transition-colors"
+                 >
                     <Download size={18} />
                     <span>Download PDF</span>
                  </button>
