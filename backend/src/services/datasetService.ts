@@ -491,12 +491,13 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
     // Insert base entities
     const createManySafe = async <T extends keyof PrismaClient>(model: T, data: any[], batchSize = 500) => {
       if (!data.length) return;
-      // Use skipDuplicates to avoid constraint failures when the client re-pushes the same data.
       // Batch inserts to keep SQLite + Prisma fast/stable even with large attendance datasets.
+      // NOTE: Prisma SQLite createMany does not support skipDuplicates in this project setup,
+      // but we already clear school rows via deleteMany() at the top of the transaction.
       for (let i = 0; i < data.length; i += batchSize) {
         const chunk = data.slice(i, i + batchSize);
         // @ts-ignore dynamic model access
-        await tx[model].createMany({ data: chunk, skipDuplicates: true });
+        await tx[model].createMany({ data: chunk });
       }
     };
 
