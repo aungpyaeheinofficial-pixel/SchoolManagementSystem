@@ -827,6 +827,7 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
       onClose={handleCloseModal} 
       onChange={setFormData} 
       onSave={handleSave} 
+      classNameOptions={classNameOptions}
     />
     {showAdmissionModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -863,7 +864,8 @@ const StudentModal: React.FC<{
   onClose: () => void;
   onChange: (data: Partial<Student>) => void;
   onSave: () => void;
-}> = ({ isOpen, mode, formData, onClose, onChange, onSave }) => {
+  classNameOptions: string[];
+}> = ({ isOpen, mode, formData, onClose, onChange, onSave, classNameOptions }) => {
   if (!isOpen) return null;
 
   const isView = mode === 'view';
