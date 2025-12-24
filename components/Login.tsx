@@ -4,6 +4,7 @@ import {
   ArrowRight, BookOpen, Users, Award,
   Shield, ChevronDown
 } from 'lucide-react';
+import { apiFetch, setAuthToken, getApiBaseUrl } from '../services/api';
 
 interface LoginProps {
   onLogin: (user: { email: string; role: string; name: string }) => void;
@@ -51,20 +52,37 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const user = DEMO_USERS[selectedRole];
-    if (email === user.email && password === user.password) {
-      if (rememberMe) {
-        localStorage.setItem('pnsp_remembered_user', JSON.stringify({ email, role: selectedRole }));
+    try {
+      const apiBase = getApiBaseUrl();
+      if (apiBase) {
+        // Backend auth (preferred when VITE_API_BASE_URL is set)
+        const res = await apiFetch<{ token: string; user: { username: string; role: string } }>(
+          '/api/auth/login',
+          { method: 'POST', body: JSON.stringify({ username: email, password }) }
+        );
+        setAuthToken(res.token);
+        if (rememberMe) {
+          localStorage.setItem('pnsp_remembered_user', JSON.stringify({ email, role: selectedRole }));
+        }
+        onLogin({ email, role: res.user.role, name: res.user.username });
+      } else {
+        // Demo login (offline/local mode)
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const user = DEMO_USERS[selectedRole];
+        if (email === user.email && password === user.password) {
+          if (rememberMe) {
+            localStorage.setItem('pnsp_remembered_user', JSON.stringify({ email, role: selectedRole }));
+          }
+          onLogin({ email, role: user.role, name: user.name });
+        } else {
+          setError('Invalid email or password. Please try again.');
+        }
       }
-      onLogin({ email, role: user.role, name: user.name });
-    } else {
-      setError('Invalid email or password. Please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const roleConfig = {

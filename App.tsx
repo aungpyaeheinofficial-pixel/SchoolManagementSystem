@@ -24,6 +24,7 @@ import { Settings } from './components/Settings';
 import { DataProvider, useData } from './contexts/DataContext';
 import { ViewState } from './types';
 import { Menu, LogOut, User, Bell, ChevronDown } from 'lucide-react';
+import { DataService } from './services/dataService';
 
 interface AuthUser {
   email: string;
@@ -56,10 +57,20 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
+  // If backend is configured, enable background auto-sync once per app session.
+  useEffect(() => {
+    DataService.startAutoSync();
+  }, []);
+
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
     localStorage.setItem('pnsp_current_user', JSON.stringify(user));
+
+    // Best-effort: pull latest server dataset right after login (if backend enabled)
+    DataService.pullFromServer().catch(() => {
+      // silent; app still works offline/local-first
+    });
   };
 
   const handleLogout = () => {

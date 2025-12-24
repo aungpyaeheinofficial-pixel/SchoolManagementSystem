@@ -1,5 +1,6 @@
 import { Student, Staff, Expense, Exam, ExamResult, TimetableEntry, ClassGroup, Room, Subject, FeeType } from '../types';
 import { STUDENTS_MOCK, STAFF_MOCK, EXPENSES_MOCK, EXAMS_MOCK, MARKS_MOCK, TIMETABLE_MOCK, CLASSES_MOCK, ROOMS_MOCK, SUBJECTS_MOCK, FEE_STRUCTURES_MOCK } from '../constants';
+import { apiFetch } from './api';
 
 // Storage Keys
 const STORAGE_KEYS = {
@@ -45,6 +46,64 @@ const saveData = <T>(key: string, data: T[]): void => {
 
 // Data Service Class
 export class DataService {
+  // -------- Backend Sync (optional) --------
+  private static isBackendSyncEnabled(): boolean {
+    // If apiFetch can resolve base URL, it's enabled.
+    try {
+      // apiFetch will throw if base URL is missing; we don't call it here.
+      return !!(import.meta as any).env?.VITE_API_BASE_URL;
+    } catch {
+      return false;
+    }
+  }
+
+  static getLocalServerVersion(): number {
+    const raw = localStorage.getItem('pnsp_server_version');
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  static setLocalServerVersion(version: number) {
+    localStorage.setItem('pnsp_server_version', String(version));
+  }
+
+  static async pullFromServer(): Promise<{ version: number }> {
+    const res = await apiFetch<{ version: number; data: any | null }>('/api/sync/pull', { auth: true });
+    if (res?.data) {
+      // Import into local storage so existing app continues to work unchanged.
+      this.importAllData(JSON.stringify(res.data));
+      this.setLocalServerVersion(res.version || 0);
+    }
+    return { version: res?.version || 0 };
+  }
+
+  static async pushToServer(): Promise<{ version: number }> {
+    const baseVersion = this.getLocalServerVersion();
+    const data = JSON.parse(this.exportAllData());
+    const res = await apiFetch<{ version: number }>('/api/sync/push', {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify({ baseVersion, data }),
+    });
+    if (typeof res?.version === 'number') this.setLocalServerVersion(res.version);
+    return { version: res?.version || baseVersion };
+  }
+
+  private static syncTimer: number | null = null;
+  static startAutoSync(): void {
+    if (!this.isBackendSyncEnabled()) return;
+
+    const schedule = () => {
+      if (this.syncTimer) window.clearTimeout(this.syncTimer);
+      this.syncTimer = window.setTimeout(() => {
+        this.pushToServer().catch((e) => console.warn('Auto-sync failed:', e));
+      }, 1200);
+    };
+
+    window.addEventListener('dataUpdated', schedule as any);
+    window.addEventListener('dataImported', schedule as any);
+  }
+
   // Students
   static getStudents(): Student[] {
     return initializeData(STORAGE_KEYS.students, STUDENTS_MOCK);
