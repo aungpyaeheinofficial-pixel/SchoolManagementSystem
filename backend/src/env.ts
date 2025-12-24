@@ -14,6 +14,10 @@ const envSchema = z.object({
   // Multi-tenant in future. For now single dataset.
   DATASET_KEY: z.string().default('default'),
 
+  // Multi-school defaults (seed/setup)
+  DEFAULT_SCHOOL_NAME: z.string().default('Default School'),
+  DEFAULT_SCHOOL_SLUG: z.string().default('default-school'),
+
   // CORS
   CORS_ORIGIN: z.string().optional(), // e.g. "http://localhost:3200,https://yourdomain.com"
 

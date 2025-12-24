@@ -4,19 +4,24 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma.js';
 import { env } from '../env.js';
 import { requireAuth } from '../middleware/auth.js';
+import { exportDatasetForSchool, importDatasetForSchool } from '../services/datasetService.js';
 
 export const syncRouter = Router();
 
-syncRouter.get('/pull', requireAuth, async (_req, res) => {
-  const dataset = await prisma.dataset.findUnique({ where: { key: env.DATASET_KEY } });
-  if (!dataset) {
-    return res.json({ key: env.DATASET_KEY, version: 0, data: null, updatedAt: null });
-  }
+syncRouter.get('/pull', requireAuth, async (req, res) => {
+  const schoolId = req.user!.schoolId;
+
+  const dataset = await prisma.dataset.findUnique({
+    where: { schoolId_key: { schoolId, key: env.DATASET_KEY } },
+  });
+
+  const data = await exportDatasetForSchool(prisma, schoolId);
+
   return res.json({
-    key: dataset.key,
-    version: dataset.version,
-    data: dataset.data,
-    updatedAt: dataset.updatedAt,
+    key: env.DATASET_KEY,
+    version: dataset?.version ?? 0,
+    data,
+    updatedAt: dataset?.updatedAt ?? null,
   });
 });
 
@@ -32,7 +37,11 @@ syncRouter.post('/push', requireAuth, async (req, res) => {
   }
 
   const { baseVersion, data } = parsed.data;
-  const existing = await prisma.dataset.findUnique({ where: { key: env.DATASET_KEY } });
+  const schoolId = req.user!.schoolId;
+
+  const existing = await prisma.dataset.findUnique({
+    where: { schoolId_key: { schoolId, key: env.DATASET_KEY } },
+  });
 
   if (existing && typeof baseVersion === 'number' && baseVersion !== existing.version) {
     return res.status(409).json({
@@ -45,9 +54,12 @@ syncRouter.post('/push', requireAuth, async (req, res) => {
   const nextVersion = (existing?.version ?? 0) + 1;
   const jsonData = data as Prisma.InputJsonValue;
 
+  // Write relational tables + keep a JSON snapshot for versioning/backup
+  await importDatasetForSchool(prisma, schoolId, data as any);
+
   const updated = await prisma.dataset.upsert({
-    where: { key: env.DATASET_KEY },
-    create: { key: env.DATASET_KEY, version: nextVersion, data: jsonData },
+    where: { schoolId_key: { schoolId, key: env.DATASET_KEY } },
+    create: { schoolId, key: env.DATASET_KEY, version: nextVersion, data: jsonData },
     update: { version: nextVersion, data: jsonData },
   });
 
