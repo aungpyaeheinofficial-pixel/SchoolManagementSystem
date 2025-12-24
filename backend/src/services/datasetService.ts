@@ -489,12 +489,15 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
     const studentsAll = [...students, ...extraStudents];
 
     // Insert base entities
-    const createManySafe = async <T extends keyof PrismaClient>(model: T, data: any[]) => {
+    const createManySafe = async <T extends keyof PrismaClient>(model: T, data: any[], batchSize = 500) => {
       if (!data.length) return;
       // Use skipDuplicates to avoid constraint failures when the client re-pushes the same data.
-      // Prisma supports skipDuplicates on createMany for all these models.
-      // @ts-ignore dynamic model access
-      await tx[model].createMany({ data, skipDuplicates: true });
+      // Batch inserts to keep SQLite + Prisma fast/stable even with large attendance datasets.
+      for (let i = 0; i < data.length; i += batchSize) {
+        const chunk = data.slice(i, i + batchSize);
+        // @ts-ignore dynamic model access
+        await tx[model].createMany({ data: chunk, skipDuplicates: true });
+      }
     };
 
     await createManySafe('staff', staffAll.map((s: any) => ({
@@ -561,24 +564,24 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       classId: null,
     })));
 
-    if (timetable.length) {
-      await tx.timetableEntry.createMany({
-        data: timetable.map((t: any) => ({
-          schoolId,
-          id: String(t.id),
-          classId: String(t.classId ?? ''),
-          day: (toEnumKey(t.day) as any) || 'Monday',
-          periodId: Number(t.periodId ?? 0),
-          subjectId: String(t.subjectId ?? ''),
-          teacherId: String(t.teacherId ?? ''),
-          curriculumType: (toEnumKey(t.curriculumType) as any) || 'Public',
-        })),
-      });
-    }
+    await createManySafe(
+      'timetableEntry',
+      timetable.map((t: any) => ({
+        schoolId,
+        id: String(t.id),
+        classId: String(t.classId ?? ''),
+        day: (toEnumKey(t.day) as any) || 'Monday',
+        periodId: Number(t.periodId ?? 0),
+        subjectId: String(t.subjectId ?? ''),
+        teacherId: String(t.teacherId ?? ''),
+        curriculumType: (toEnumKey(t.curriculumType) as any) || 'Public',
+      }))
+    );
 
     if (examsAll.length) {
-      await tx.exam.createMany({
-        data: examsAll.map((e: any) => ({
+      await createManySafe(
+        'exam',
+        examsAll.map((e: any) => ({
           schoolId,
           id: String(e.id),
           name: String(e.name ?? ''),
@@ -587,8 +590,8 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
           startDate: String(e.startDate ?? ''),
           endDate: String(e.endDate ?? ''),
           status: (toEnumKey(e.status) as any) || 'Upcoming',
-        })),
-      });
+        }))
+      );
       const examClasses = examsAll.flatMap((e: any) =>
         Array.isArray(e.classes)
           ? e.classes.map((classId: any) => ({
@@ -598,12 +601,13 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
             }))
           : []
       );
-      if (examClasses.length) await tx.examClass.createMany({ data: examClasses });
+      await createManySafe('examClass', examClasses);
     }
 
     if (marks.length) {
-      await tx.examResult.createMany({
-        data: marks.map((m: any) => ({
+      await createManySafe(
+        'examResult',
+        marks.map((m: any) => ({
           schoolId,
           id: String(m.id),
           examId: String(m.examId ?? ''),
@@ -612,13 +616,14 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
           score: Number(m.score ?? 0),
           grade: String(m.grade ?? ''),
           remark: m.remark ? String(m.remark) : null,
-        })),
-      });
+        }))
+      );
     }
 
     if (fees.length) {
-      await tx.feeType.createMany({
-        data: fees.map((f: any) => ({
+      await createManySafe(
+        'feeType',
+        fees.map((f: any) => ({
           schoolId,
           id: String(f.id),
           nameEn: String(f.nameEn ?? ''),
@@ -630,13 +635,14 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
           description: f.description ? String(f.description) : null,
           dueDate: f.dueDate ? String(f.dueDate) : null,
           isActive: Boolean(f.isActive),
-        })),
-      });
+        }))
+      );
     }
 
     if (expenses.length) {
-      await tx.expense.createMany({
-        data: expenses.map((e: any) => {
+      await createManySafe(
+        'expense',
+        expenses.map((e: any) => {
           const { id, category, description, amount, date, paymentMethod, status, ...rest } = e || {};
           const meta = Object.keys(rest).length ? (rest as Prisma.InputJsonValue) : undefined;
           return {
@@ -650,14 +656,15 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
             status: (toEnumKey(status) as any) || 'Paid',
             meta,
           };
-        }),
-      });
+        })
+      );
     }
 
     // Payments with multiple items
     if (payments.length) {
-      await tx.payment.createMany({
-        data: payments.map((p: any) => {
+      await createManySafe(
+        'payment',
+        payments.map((p: any) => {
           const rawStudentId = p.studentId ? String(p.studentId) : null;
           const safeStudentId = rawStudentId && studentIds.has(rawStudentId) ? rawStudentId : null;
           return {
@@ -672,8 +679,8 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
             date: String(p.date ?? new Date().toISOString().slice(0, 10)),
             meta: p.meta ? (p.meta as Prisma.InputJsonValue) : undefined,
           };
-        }),
-      });
+        })
+      );
 
       const allItems = payments.flatMap((p: any) => {
         const id = String(p.id);
@@ -718,9 +725,7 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
         ];
       });
 
-      if (allItems.length) {
-        await tx.paymentItem.createMany({ data: allItems });
-      }
+      await createManySafe('paymentItem', allItems);
     }
 
     // Attendance import (optional: if structure matches)
@@ -739,7 +744,7 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
           status: (toEnumKey(rec?.status) as any) || 'PRESENT',
           remark: rec?.remark ? String(rec.remark) : null,
         }));
-        if (records.length) await tx.studentAttendanceRecord.createMany({ data: records });
+        await createManySafe('studentAttendanceRecord', records);
       }
     }
 
@@ -756,7 +761,7 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
         checkOut: rec?.checkOut ? String(rec.checkOut) : null,
         remark: rec?.remark ? String(rec.remark) : null,
       }));
-      if (records.length) await tx.staffAttendanceRecord.createMany({ data: records });
+      await createManySafe('staffAttendanceRecord', records);
     }
   });
 }
