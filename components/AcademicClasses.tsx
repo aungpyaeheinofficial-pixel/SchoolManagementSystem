@@ -1,19 +1,33 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { CLASSES_MOCK, ROOMS_MOCK, STAFF_MOCK, GRADE_LEVELS_LIST } from '../constants';
-import { ClassGroup, Room } from '../types';
+import { GRADE_LEVELS_LIST } from '../constants';
+import { ClassGroup, Room, Staff } from '../types';
 import { 
   Users, LayoutGrid, DoorOpen, Plus, Search, Filter, 
   MoreHorizontal, PenSquare, Trash2, GraduationCap, 
   Building, Zap, Projector, Monitor, Beaker, CheckCircle2, X, BarChart3
 } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
 
 export const AcademicClasses: React.FC = () => {
-  const [classes, setClasses] = useState<ClassGroup[]>(CLASSES_MOCK);
-  const [rooms] = useState<Room[]>(ROOMS_MOCK);
+  const {
+    classes,
+    addClass,
+    updateClass,
+    deleteClass,
+    rooms,
+    addRoom,
+    updateRoom,
+    deleteRoom,
+    staff,
+  } = useData();
   
   // Modal States
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
+  const [activeTab, setActiveTab] = useState<'classes' | 'rooms'>('classes');
+
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
   const [classFormData, setClassFormData] = useState<Partial<ClassGroup>>({
     name: '',
@@ -21,8 +35,19 @@ export const AcademicClasses: React.FC = () => {
     section: 'A',
     teacherId: '',
     teacherName: 'Unassigned',
+    roomId: '',
+    roomName: 'Unassigned',
     studentCount: 0,
     maxCapacity: 40
+  });
+
+  const [roomFormData, setRoomFormData] = useState<Partial<Room>>({
+    number: '',
+    building: '',
+    type: 'Classroom',
+    capacity: 40,
+    isOccupied: false,
+    facilities: [],
   });
 
   // Filters
@@ -46,7 +71,7 @@ export const AcademicClasses: React.FC = () => {
   const roomUtilization = useMemo(() => {
     return rooms.map(room => {
       const enrolled = classes
-        .filter(c => c.roomId === room.id || c.roomName === room.number)
+        .filter(c => c.roomId === room.id)
         .reduce((sum, c) => sum + (c.studentCount ?? 0), 0);
       const utilization = room.capacity ? Math.min(100, Math.round((enrolled / room.capacity) * 100)) : 0;
       return { room, enrolled, utilization };
@@ -137,51 +162,46 @@ export const AcademicClasses: React.FC = () => {
   // --- Handlers ---
   const handleDeleteClass = (id: string) => {
     if (confirm('Are you sure you want to delete this class?')) {
-      setClasses(prev => prev.filter(c => c.id !== id));
+      deleteClass(id);
     }
   };
 
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!classFormData.name || !classFormData.gradeLevel) {
-      alert('Please fill in required fields (Class Name, Grade Level)');
+    if (!classFormData.name || !classFormData.gradeLevel || !classFormData.teacherId || !classFormData.roomId) {
+      alert('Please fill in required fields (Class Name, Grade Level, Teacher, Room)');
       return;
     }
 
     if (editingClass) {
-      setClasses(prev => prev.map(c => 
-        c.id === editingClass.id 
-          ? { 
-              ...c, 
-              ...classFormData,
-              name: classFormData.name || c.name,
-              gradeLevel: classFormData.gradeLevel || c.gradeLevel,
-              section: classFormData.section || c.section,
-              teacherId: classFormData.teacherId || c.teacherId,
-              teacherName: classFormData.teacherName || c.teacherName,
-              roomId: c.roomId,
-              roomName: c.roomName,
-              studentCount: classFormData.studentCount ?? c.studentCount,
-              maxCapacity: classFormData.maxCapacity ?? c.maxCapacity
-            } 
-          : c
-      ));
+      updateClass(editingClass.id, {
+        name: classFormData.name || editingClass.name,
+        gradeLevel: classFormData.gradeLevel || editingClass.gradeLevel,
+        section: classFormData.section || editingClass.section,
+        teacherId: classFormData.teacherId || editingClass.teacherId,
+        teacherName: classFormData.teacherName || editingClass.teacherName,
+        roomId: classFormData.roomId || editingClass.roomId,
+        roomName: classFormData.roomName || editingClass.roomName,
+        studentCount: classFormData.studentCount ?? editingClass.studentCount,
+        maxCapacity: classFormData.maxCapacity ?? editingClass.maxCapacity,
+      });
     } else {
-      const selectedTeacher = STAFF_MOCK.find(t => t.id === classFormData.teacherId);
+      const selectedTeacher = staff.find((t: Staff) => t.id === classFormData.teacherId);
+      const selectedRoom = rooms.find((r: Room) => r.id === classFormData.roomId);
       
     const newClass: ClassGroup = {
-        id: `CL-${Math.floor(Math.random() * 10000)}`,
+        id: `CL-${Date.now().toString(36).toUpperCase().slice(-6)}`,
         name: classFormData.name || 'New Grade',
         gradeLevel: classFormData.gradeLevel || 'Grade 10',
         section: classFormData.section || 'A',
         teacherId: classFormData.teacherId || '',
         teacherName: selectedTeacher?.name || 'Unassigned',
-        roomId: '',
-        roomName: 'Unassigned',
+        roomId: classFormData.roomId || '',
+        roomName: selectedRoom?.number || selectedRoom?.id || classFormData.roomName || 'Unassigned',
         studentCount: classFormData.studentCount ?? 0,
         maxCapacity: classFormData.maxCapacity ?? 40
       };
-      setClasses([...classes, newClass]);
+      addClass(newClass);
     }
     setIsAddClassOpen(false);
     setEditingClass(null);
@@ -191,8 +211,67 @@ export const AcademicClasses: React.FC = () => {
       section: 'A',
       teacherId: '',
       teacherName: 'Unassigned',
+      roomId: '',
+      roomName: 'Unassigned',
       studentCount: 0,
       maxCapacity: 40
+    });
+  };
+
+  const handleDeleteRoom = (id: string) => {
+    if (confirm('Are you sure you want to delete this room?')) {
+      deleteRoom(id);
+    }
+  };
+
+  const handleAddRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roomFormData.number || !roomFormData.type) {
+      alert('Please fill in required fields (Room Number, Type)');
+      return;
+    }
+
+    const facilities =
+      typeof (roomFormData as any).facilitiesText === 'string'
+        ? String((roomFormData as any).facilitiesText)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : Array.isArray(roomFormData.facilities)
+          ? roomFormData.facilities
+          : [];
+
+    if (editingRoom) {
+      updateRoom(editingRoom.id, {
+        number: roomFormData.number || editingRoom.number,
+        building: roomFormData.building ?? editingRoom.building,
+        type: (roomFormData.type as any) || editingRoom.type,
+        capacity: roomFormData.capacity ?? editingRoom.capacity,
+        isOccupied: roomFormData.isOccupied ?? editingRoom.isOccupied,
+        facilities,
+      });
+    } else {
+      const newRoom: Room = {
+        id: `RM-${Date.now().toString(36).toUpperCase().slice(-6)}`,
+        number: roomFormData.number || '',
+        building: roomFormData.building || '',
+        type: (roomFormData.type as any) || 'Classroom',
+        capacity: Number(roomFormData.capacity ?? 0),
+        isOccupied: Boolean(roomFormData.isOccupied),
+        facilities,
+      };
+      addRoom(newRoom);
+    }
+
+    setIsAddRoomOpen(false);
+    setEditingRoom(null);
+    setRoomFormData({
+      number: '',
+      building: '',
+      type: 'Classroom',
+      capacity: 40,
+      isOccupied: false,
+      facilities: [],
     });
   };
 
@@ -236,6 +315,8 @@ export const AcademicClasses: React.FC = () => {
                 section: 'A',
                 teacherId: '',
                 teacherName: 'Unassigned',
+                roomId: '',
+                roomName: 'Unassigned',
                 studentCount: 0,
                 maxCapacity: 40
               });
@@ -368,6 +449,8 @@ export const AcademicClasses: React.FC = () => {
                                   section: cls.section,
                                   teacherId: cls.teacherId,
                                   teacherName: cls.teacherName,
+                                  roomId: cls.roomId,
+                                  roomName: cls.roomName,
                                   studentCount: cls.studentCount,
                                   maxCapacity: cls.maxCapacity
                                 });
@@ -390,6 +473,111 @@ export const AcademicClasses: React.FC = () => {
           </table>
           </div>
        </div>
+    </div>
+  );
+
+  const renderRoomsTab = () => (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-white p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
+            <DoorOpen size={16} className="text-slate-400" />
+            <span className="text-sm font-bold text-slate-700">{rooms.length} rooms</span>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setEditingRoom(null);
+            setRoomFormData({
+              number: '',
+              building: '',
+              type: 'Classroom',
+              capacity: 40,
+              isOccupied: false,
+              facilities: [],
+            });
+            setIsAddRoomOpen(true);
+          }}
+          className="w-full md:w-auto px-5 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
+        >
+          <Plus size={18} /> Add Room
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[32px] shadow-sm overflow-hidden border border-slate-50">
+        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+          <table className="w-full text-left min-w-[900px]">
+            <thead className="bg-slate-50/50">
+              <tr>
+                <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Room</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Building</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Type</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">Capacity</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rooms.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
+                        <DoorOpen size={18} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800 text-sm">{r.number}</p>
+                        <p className="text-xs text-slate-400 font-medium">{r.id}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 text-sm text-slate-700">{r.building || '-'}</td>
+                  <td className="px-8 py-5">
+                    <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold border border-slate-200">
+                      {r.type}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-sm font-bold text-slate-700">{r.capacity}</td>
+                  <td className="px-8 py-5 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto">
+                      <button
+                        onClick={() => {
+                          setEditingRoom(r);
+                          setRoomFormData({
+                            number: r.number,
+                            building: r.building,
+                            type: r.type,
+                            capacity: r.capacity,
+                            isOccupied: r.isOccupied,
+                            facilities: r.facilities,
+                            ...(Array.isArray(r.facilities) ? { facilitiesText: r.facilities.join(', ') } : {}),
+                          } as any);
+                          setIsAddRoomOpen(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+                      >
+                        <PenSquare size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRoom(r.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {rooms.length === 0 && (
+                <tr>
+                  <td className="px-8 py-10 text-center text-slate-400" colSpan={5}>
+                    No rooms yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 
@@ -434,7 +622,24 @@ export const AcademicClasses: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      {renderClassesTab()}
+      <div className="bg-white rounded-2xl border border-slate-100 p-1 flex gap-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('classes')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${activeTab === 'classes' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+        >
+          Classes
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('rooms')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${activeTab === 'rooms' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+        >
+          Rooms
+        </button>
+      </div>
+
+      {activeTab === 'classes' ? renderClassesTab() : renderRoomsTab()}
 
       {/* --- Modals --- */}
       {isAddClassOpen && (
@@ -489,11 +694,11 @@ export const AcademicClasses: React.FC = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Class Teacher</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Class Teacher *</label>
                         <select
                            value={classFormData.teacherId || ''}
                            onChange={(e) => {
-                              const teacher = STAFF_MOCK.find(t => t.id === e.target.value);
+                              const teacher = staff.find((t: Staff) => t.id === e.target.value);
                               setClassFormData({ 
                                  ...classFormData, 
                                  teacherId: e.target.value,
@@ -501,13 +706,44 @@ export const AcademicClasses: React.FC = () => {
                               });
                            }}
                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                           required
                         >
-                           <option value="">Unassigned</option>
-                           {STAFF_MOCK.map(teacher => (
+                           <option value="">Select teacher</option>
+                           {staff.map((teacher: Staff) => (
                               <option key={teacher.id} value={teacher.id}>{teacher.name} - {teacher.department}</option>
                            ))}
                         </select>
                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Room *</label>
+                      <select
+                        value={classFormData.roomId || ''}
+                        onChange={(e) => {
+                          const room = rooms.find((r: Room) => r.id === e.target.value);
+                          setClassFormData({
+                            ...classFormData,
+                            roomId: e.target.value,
+                            roomName: room?.number || room?.id || 'Unassigned',
+                          });
+                        }}
+                        className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                        required
+                      >
+                        <option value="">Select room</option>
+                        {rooms.map((room: Room) => (
+                          <option key={room.id} value={room.id}>
+                            {room.number} ({room.type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl px-4 py-3 text-sm text-slate-600 flex items-center">
+                      <span className="font-bold mr-2">Selected:</span>
+                      <span>{classFormData.roomName || 'Unassigned'}</span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -558,6 +794,87 @@ export const AcademicClasses: React.FC = () => {
                </div>
             </div>
          </div>
+      )}
+
+      {isAddRoomOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in pn-modal-overlay" onClick={(e) => e.target === e.currentTarget && setIsAddRoomOpen(false)}>
+          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] pn-modal-panel">
+            <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-800">{editingRoom ? 'Edit Room' : 'Add New Room'}</h3>
+              <button onClick={() => setIsAddRoomOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors pn-modal-close"><X size={20} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pn-modal-compact" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+              <form onSubmit={handleAddRoom} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Room Number *</label>
+                    <input
+                      type="text"
+                      value={roomFormData.number || ''}
+                      onChange={(e) => setRoomFormData({ ...roomFormData, number: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      placeholder="e.g. 101, Lab-1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Building</label>
+                    <input
+                      type="text"
+                      value={roomFormData.building || ''}
+                      onChange={(e) => setRoomFormData({ ...roomFormData, building: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      placeholder="e.g. Main Building"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Type *</label>
+                    <select
+                      value={(roomFormData.type as any) || 'Classroom'}
+                      onChange={(e) => setRoomFormData({ ...roomFormData, type: e.target.value as any })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                      required
+                    >
+                      <option value="Classroom">Classroom</option>
+                      <option value="Laboratory">Laboratory</option>
+                      <option value="Hall">Hall</option>
+                      <option value="Office">Office</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Capacity</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={roomFormData.capacity ?? 0}
+                      onChange={(e) => setRoomFormData({ ...roomFormData, capacity: Number(e.target.value) })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Facilities (comma separated)</label>
+                  <input
+                    type="text"
+                    value={(roomFormData as any).facilitiesText || (Array.isArray(roomFormData.facilities) ? roomFormData.facilities.join(', ') : '')}
+                    onChange={(e) => setRoomFormData({ ...(roomFormData as any), facilitiesText: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20"
+                    placeholder="Projector, AC, Whiteboard"
+                  />
+                </div>
+
+                <button type="submit" className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-600/20 transition-all mt-6">
+                  {editingRoom ? 'Save Changes' : 'Create Room'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
