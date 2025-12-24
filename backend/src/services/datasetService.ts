@@ -278,10 +278,220 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
     await tx.feeType.deleteMany({ where: { schoolId } });
     await tx.expense.deleteMany({ where: { schoolId } });
 
+    // ------------------------------------------------------------
+    // Pre-flight: ensure foreign-key referenced IDs exist.
+    // Your current frontend mock data can reference teacherId/roomId
+    // values that are not present in staff/rooms arrays (e.g. TF-NEW, RM-KG),
+    // which would otherwise cause this import transaction to fail.
+    // ------------------------------------------------------------
+    const staffIds = new Set(staff.map((s: any) => String(s.id)));
+    const roomIds = new Set(rooms.map((r: any) => String(r.id)));
+    const classIds = new Set(classes.map((c: any) => String(c.id)));
+    const subjectIds = new Set(subjects.map((s: any) => String(s.id)));
+    const examIds = new Set(exams.map((e: any) => String(e.id)));
+    const studentIds = new Set(students.map((s: any) => String(s.id)));
+    const feeTypeIds = new Set(fees.map((f: any) => String(f.id)));
+
+    const attendanceObj = data.attendance && typeof data.attendance === 'object' ? (data.attendance as AnyObj) : {};
+    const staffAttendanceObj =
+      data.staffAttendance && typeof data.staffAttendance === 'object' ? (data.staffAttendance as AnyObj) : {};
+
+    const neededTeacherIds = new Set<string>();
+    const neededRoomIds = new Set<string>();
+    const neededClassIds = new Set<string>();
+    const neededSubjectIds = new Set<string>();
+    const neededExamIds = new Set<string>();
+    const neededStudentIds = new Set<string>();
+
+    for (const c of classes) {
+      if (c?.teacherId) neededTeacherIds.add(String(c.teacherId));
+      if (c?.roomId) neededRoomIds.add(String(c.roomId));
+    }
+    for (const t of timetable) {
+      if (t?.teacherId) neededTeacherIds.add(String(t.teacherId));
+      if (t?.classId) neededClassIds.add(String(t.classId));
+      if (t?.subjectId) neededSubjectIds.add(String(t.subjectId));
+    }
+    for (const m of marks) {
+      if (m?.examId) neededExamIds.add(String(m.examId));
+      if (m?.studentId) neededStudentIds.add(String(m.studentId));
+      if (m?.subjectId) neededSubjectIds.add(String(m.subjectId));
+    }
+    for (const e of exams) {
+      if (Array.isArray(e?.classes)) {
+        for (const classId of e.classes) neededClassIds.add(String(classId));
+      }
+    }
+    for (const p of payments) {
+      if (p?.studentId) neededStudentIds.add(String(p.studentId));
+      if (Array.isArray(p?.items)) {
+        for (const it of p.items) {
+          const id = it?.feeTypeId ?? it?.feeId;
+          if (id) feeTypeIds.add(String(id));
+        }
+      }
+    }
+    for (const [date, byClass] of Object.entries(attendanceObj)) {
+      if (!byClass || typeof byClass !== 'object') continue;
+      for (const classId of Object.keys(byClass as AnyObj)) neededClassIds.add(String(classId));
+    }
+    for (const [date, byStaff] of Object.entries(staffAttendanceObj)) {
+      if (!byStaff || typeof byStaff !== 'object') continue;
+      for (const staffId of Object.keys(byStaff as AnyObj)) neededTeacherIds.add(String(staffId));
+    }
+
+    const firstKnownTeacherId = staff[0]?.id ? String(staff[0].id) : 'TF-UNKNOWN';
+    const firstKnownRoomId = rooms[0]?.id ? String(rooms[0].id) : 'RM-UNKNOWN';
+
+    // Add placeholder teachers (Staff)
+    const extraStaff: any[] = [];
+    for (const id of neededTeacherIds) {
+      if (!staffIds.has(id)) {
+        staffIds.add(id);
+        extraStaff.push({
+          id,
+          name: 'TBD',
+          role: 'Teacher',
+          baseSalary: 0,
+          department: 'Unknown',
+          joinDate: '',
+        });
+      }
+    }
+    // Ensure at least one teacher exists if classes reference unknowns only
+    if (!staffIds.size) {
+      staffIds.add(firstKnownTeacherId);
+      extraStaff.push({
+        id: firstKnownTeacherId,
+        name: 'TBD',
+        role: 'Teacher',
+        baseSalary: 0,
+        department: 'Unknown',
+        joinDate: '',
+      });
+    }
+
+    // Add placeholder rooms
+    const extraRooms: any[] = [];
+    for (const id of neededRoomIds) {
+      if (!roomIds.has(id)) {
+        roomIds.add(id);
+        extraRooms.push({
+          id,
+          number: id,
+          building: '',
+          type: 'Classroom',
+          capacity: 0,
+          isOccupied: false,
+          facilities: [],
+        });
+      }
+    }
+    if (!roomIds.size) {
+      roomIds.add(firstKnownRoomId);
+      extraRooms.push({
+        id: firstKnownRoomId,
+        number: firstKnownRoomId,
+        building: '',
+        type: 'Classroom',
+        capacity: 0,
+        isOccupied: false,
+        facilities: [],
+      });
+    }
+
+    // Add placeholder classes (needed by timetable/exams/attendance)
+    const extraClasses: any[] = [];
+    for (const id of neededClassIds) {
+      if (!classIds.has(id)) {
+        classIds.add(id);
+        extraClasses.push({
+          id,
+          name: id,
+          gradeLevel: '',
+          section: '',
+          teacherId: firstKnownTeacherId,
+          teacherName: 'TBD',
+          roomId: firstKnownRoomId,
+          roomName: firstKnownRoomId,
+          studentCount: 0,
+          maxCapacity: 0,
+        });
+        // ensure referenced teacher/room exist
+        neededTeacherIds.add(firstKnownTeacherId);
+        neededRoomIds.add(firstKnownRoomId);
+      }
+    }
+
+    // Add placeholder subjects (needed by timetable/marks)
+    const extraSubjects: any[] = [];
+    for (const id of neededSubjectIds) {
+      if (!subjectIds.has(id)) {
+        subjectIds.add(id);
+        extraSubjects.push({
+          id,
+          code: id,
+          nameEn: id,
+          nameMm: '',
+          gradeLevel: 'All',
+          type: 'Core',
+          periodsPerWeek: 0,
+          department: 'General',
+        });
+      }
+    }
+
+    // Add placeholder exams if marks reference exams missing from exams array
+    const extraExams: any[] = [];
+    for (const id of neededExamIds) {
+      if (!examIds.has(id)) {
+        examIds.add(id);
+        extraExams.push({
+          id,
+          name: id,
+          academicYear: '',
+          term: '',
+          startDate: '',
+          endDate: '',
+          status: 'Upcoming',
+          classes: [],
+        });
+      }
+    }
+
+    // Add placeholder students if marks/payments reference unknown students
+    const extraStudents: any[] = [];
+    for (const id of neededStudentIds) {
+      if (!studentIds.has(id)) {
+        studentIds.add(id);
+        extraStudents.push({
+          id,
+          nameEn: id,
+          nameMm: '',
+          fatherName: '',
+          grade: '',
+          nrc: '',
+          dob: '',
+          status: 'Active',
+          attendanceRate: 0,
+          feesPending: 0,
+          phone: '',
+          lastPaymentDate: '',
+        });
+      }
+    }
+
+    const staffAll = [...staff, ...extraStaff];
+    const roomsAll = [...rooms, ...extraRooms];
+    const classesAll = [...classes, ...extraClasses];
+    const subjectsAll = [...subjects, ...extraSubjects];
+    const examsAll = [...exams, ...extraExams];
+    const studentsAll = [...students, ...extraStudents];
+
     // Insert base entities
-    if (staff.length) {
+    if (staffAll.length) {
       await tx.staff.createMany({
-        data: staff.map((s: any) => ({
+        data: staffAll.map((s: any) => ({
           schoolId,
           id: String(s.id),
           name: String(s.name ?? ''),
@@ -293,9 +503,9 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       });
     }
 
-    if (rooms.length) {
+    if (roomsAll.length) {
       await tx.room.createMany({
-        data: rooms.map((r: any) => ({
+        data: roomsAll.map((r: any) => ({
           schoolId,
           id: String(r.id),
           number: String(r.number ?? ''),
@@ -308,9 +518,9 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       });
     }
 
-    if (classes.length) {
+    if (classesAll.length) {
       await tx.classGroup.createMany({
-        data: classes.map((c: any) => ({
+        data: classesAll.map((c: any) => ({
           schoolId,
           id: String(c.id),
           name: String(c.name ?? ''),
@@ -326,9 +536,9 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       });
     }
 
-    if (subjects.length) {
+    if (subjectsAll.length) {
       await tx.subject.createMany({
-        data: subjects.map((s: any) => ({
+        data: subjectsAll.map((s: any) => ({
           schoolId,
           id: String(s.id),
           code: String(s.code ?? ''),
@@ -342,9 +552,9 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       });
     }
 
-    if (students.length) {
+    if (studentsAll.length) {
       await tx.student.createMany({
-        data: students.map((s: any) => ({
+        data: studentsAll.map((s: any) => ({
           schoolId,
           id: String(s.id),
           nameEn: String(s.nameEn ?? ''),
@@ -378,9 +588,9 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
       });
     }
 
-    if (exams.length) {
+    if (examsAll.length) {
       await tx.exam.createMany({
-        data: exams.map((e: any) => ({
+        data: examsAll.map((e: any) => ({
           schoolId,
           id: String(e.id),
           name: String(e.name ?? ''),
@@ -391,7 +601,7 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
           status: (toEnumKey(e.status) as any) || 'Upcoming',
         })),
       });
-      const examClasses = exams.flatMap((e: any) =>
+      const examClasses = examsAll.flatMap((e: any) =>
         Array.isArray(e.classes)
           ? e.classes.map((classId: any) => ({
               schoolId,
@@ -459,18 +669,22 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
     // Payments with multiple items
     if (payments.length) {
       await tx.payment.createMany({
-        data: payments.map((p: any) => ({
-          schoolId,
-          id: String(p.id),
-          studentId: p.studentId ? String(p.studentId) : null,
-          payerName: p.payerName ? String(p.payerName) : null,
-          paymentMethod: String(p.paymentMethod ?? p.method ?? 'Cash'),
-          remark: p.remark ? String(p.remark) : null,
-          discount: Number(p.discount ?? 0),
-          totalAmount: Number(p.totalAmount ?? p.amount ?? 0),
-          date: String(p.date ?? new Date().toISOString().slice(0, 10)),
-          meta: p.meta ? (p.meta as Prisma.InputJsonValue) : undefined,
-        })),
+        data: payments.map((p: any) => {
+          const rawStudentId = p.studentId ? String(p.studentId) : null;
+          const safeStudentId = rawStudentId && studentIds.has(rawStudentId) ? rawStudentId : null;
+          return {
+            schoolId,
+            id: String(p.id),
+            studentId: safeStudentId,
+            payerName: p.payerName ? String(p.payerName) : null,
+            paymentMethod: String(p.paymentMethod ?? p.method ?? 'Cash'),
+            remark: p.remark ? String(p.remark) : null,
+            discount: Number(p.discount ?? 0),
+            totalAmount: Number(p.totalAmount ?? p.amount ?? 0),
+            date: String(p.date ?? new Date().toISOString().slice(0, 10)),
+            meta: p.meta ? (p.meta as Prisma.InputJsonValue) : undefined,
+          };
+        }),
       });
 
       const allItems = payments.flatMap((p: any) => {
@@ -483,7 +697,10 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
             schoolId,
             paymentId: id,
             lineNo: Number(it.lineNo ?? idx + 1),
-            feeTypeId: it.feeTypeId ? String(it.feeTypeId) : (it.feeId ? String(it.feeId) : null),
+            feeTypeId: (() => {
+              const raw = it.feeTypeId ? String(it.feeTypeId) : it.feeId ? String(it.feeId) : null;
+              return raw && feeTypeIds.has(raw) ? raw : null;
+            })(),
             description: it.description ? String(it.description) : null,
             amount: Number(it.amount ?? 0),
           }));
@@ -494,7 +711,7 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
             schoolId,
             paymentId: id,
             lineNo: idx + 1,
-            feeTypeId: String(feeId),
+            feeTypeId: feeTypeIds.has(String(feeId)) ? String(feeId) : null,
             description: null,
             amount: 0,
           }));
