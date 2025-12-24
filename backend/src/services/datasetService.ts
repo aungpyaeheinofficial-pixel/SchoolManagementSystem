@@ -489,89 +489,77 @@ export async function importDatasetForSchool(prisma: PrismaClient, schoolId: str
     const studentsAll = [...students, ...extraStudents];
 
     // Insert base entities
-    if (staffAll.length) {
-      await tx.staff.createMany({
-        data: staffAll.map((s: any) => ({
-          schoolId,
-          id: String(s.id),
-          name: String(s.name ?? ''),
-          role: String(s.role ?? ''),
-          baseSalary: Number(s.baseSalary ?? 0),
-          department: String(s.department ?? ''),
-          joinDate: String(s.joinDate ?? ''),
-        })),
-      });
-    }
+    const createManySafe = async <T extends keyof PrismaClient>(model: T, data: any[]) => {
+      if (!data.length) return;
+      // Use skipDuplicates to avoid constraint failures when the client re-pushes the same data.
+      // Prisma supports skipDuplicates on createMany for all these models.
+      // @ts-ignore dynamic model access
+      await tx[model].createMany({ data, skipDuplicates: true });
+    };
 
-    if (roomsAll.length) {
-      await tx.room.createMany({
-        data: roomsAll.map((r: any) => ({
-          schoolId,
-          id: String(r.id),
-          number: String(r.number ?? ''),
-          building: String(r.building ?? ''),
-          type: (toEnumKey(r.type) as any) || 'Classroom',
-          capacity: Number(r.capacity ?? 0),
-          isOccupied: Boolean(r.isOccupied),
-          facilities: (r.facilities ?? []) as Prisma.InputJsonValue,
-        })),
-      });
-    }
+    await createManySafe('staff', staffAll.map((s: any) => ({
+      schoolId,
+      id: String(s.id),
+      name: String(s.name ?? ''),
+      role: String(s.role ?? ''),
+      baseSalary: Number(s.baseSalary ?? 0),
+      department: String(s.department ?? ''),
+      joinDate: String(s.joinDate ?? ''),
+    })));
 
-    if (classesAll.length) {
-      await tx.classGroup.createMany({
-        data: classesAll.map((c: any) => ({
-          schoolId,
-          id: String(c.id),
-          name: String(c.name ?? ''),
-          gradeLevel: String(c.gradeLevel ?? ''),
-          section: String(c.section ?? ''),
-          teacherId: String(c.teacherId ?? ''),
-          teacherName: String(c.teacherName ?? ''),
-          roomId: String(c.roomId ?? ''),
-          roomName: String(c.roomName ?? ''),
-          studentCount: Number(c.studentCount ?? 0),
-          maxCapacity: Number(c.maxCapacity ?? 0),
-        })),
-      });
-    }
+    await createManySafe('room', roomsAll.map((r: any) => ({
+      schoolId,
+      id: String(r.id),
+      number: String(r.number ?? ''),
+      building: String(r.building ?? ''),
+      type: (toEnumKey(r.type) as any) || 'Classroom',
+      capacity: Number(r.capacity ?? 0),
+      isOccupied: Boolean(r.isOccupied),
+      facilities: (r.facilities ?? []) as Prisma.InputJsonValue,
+    })));
 
-    if (subjectsAll.length) {
-      await tx.subject.createMany({
-        data: subjectsAll.map((s: any) => ({
-          schoolId,
-          id: String(s.id),
-          code: String(s.code ?? ''),
-          nameEn: String(s.nameEn ?? ''),
-          nameMm: String(s.nameMm ?? ''),
-          gradeLevel: String(s.gradeLevel ?? ''),
-          type: (toEnumKey(s.type) as any) || 'Core',
-          periodsPerWeek: Number(s.periodsPerWeek ?? 0),
-          department: String(s.department ?? ''),
-        })),
-      });
-    }
+    await createManySafe('classGroup', classesAll.map((c: any) => ({
+      schoolId,
+      id: String(c.id),
+      name: String(c.name ?? ''),
+      gradeLevel: String(c.gradeLevel ?? ''),
+      section: String(c.section ?? ''),
+      teacherId: String(c.teacherId ?? ''),
+      teacherName: String(c.teacherName ?? ''),
+      roomId: String(c.roomId ?? ''),
+      roomName: String(c.roomName ?? ''),
+      studentCount: Number(c.studentCount ?? 0),
+      maxCapacity: Number(c.maxCapacity ?? 0),
+    })));
 
-    if (studentsAll.length) {
-      await tx.student.createMany({
-        data: studentsAll.map((s: any) => ({
-          schoolId,
-          id: String(s.id),
-          nameEn: String(s.nameEn ?? ''),
-          nameMm: String(s.nameMm ?? ''),
-          fatherName: String(s.fatherName ?? ''),
-          grade: String(s.grade ?? ''),
-          nrc: s.nrc ? String(s.nrc) : null,
-          dob: String(s.dob ?? ''),
-          status: (toEnumKey(s.status) === 'Fees_Due' ? 'Fees_Due' : toEnumKey(s.status)) as any,
-          attendanceRate: Number(s.attendanceRate ?? 0),
-          feesPending: Number(s.feesPending ?? 0),
-          phone: String(s.phone ?? ''),
-          lastPaymentDate: s.lastPaymentDate ? String(s.lastPaymentDate) : null,
-          classId: null,
-        })),
-      });
-    }
+    await createManySafe('subject', subjectsAll.map((s: any) => ({
+      schoolId,
+      id: String(s.id),
+      code: String(s.code ?? ''),
+      nameEn: String(s.nameEn ?? ''),
+      nameMm: String(s.nameMm ?? ''),
+      gradeLevel: String(s.gradeLevel ?? ''),
+      type: (toEnumKey(s.type) as any) || 'Core',
+      periodsPerWeek: Number(s.periodsPerWeek ?? 0),
+      department: String(s.department ?? ''),
+    })));
+
+    await createManySafe('student', studentsAll.map((s: any) => ({
+      schoolId,
+      id: String(s.id),
+      nameEn: String(s.nameEn ?? ''),
+      nameMm: String(s.nameMm ?? ''),
+      fatherName: String(s.fatherName ?? ''),
+      grade: String(s.grade ?? ''),
+      nrc: s.nrc ? String(s.nrc) : null,
+      dob: String(s.dob ?? ''),
+      status: (toEnumKey(s.status) === 'Fees_Due' ? 'Fees_Due' : toEnumKey(s.status)) as any,
+      attendanceRate: Number(s.attendanceRate ?? 0),
+      feesPending: Number(s.feesPending ?? 0),
+      phone: String(s.phone ?? ''),
+      lastPaymentDate: s.lastPaymentDate ? String(s.lastPaymentDate) : null,
+      classId: null,
+    })));
 
     if (timetable.length) {
       await tx.timetableEntry.createMany({
