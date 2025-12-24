@@ -133,14 +133,28 @@ export const HR: React.FC = () => {
     }
   };
 
-  const openPrintWindow = (title: string, bodyHtml: string, autoPrint = true) => {
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (!w) {
-      alert('Popup blocked. Please allow popups to print/download.');
+  const openPrintIframe = (title: string, bodyHtml: string) => {
+    // Avoid popup blockers by printing from a hidden iframe.
+    // Users can still "Save as PDF" from the print dialog.
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      alert('Unable to open print preview.');
       return;
     }
-    w.document.open();
-    w.document.write(`
+
+    doc.open();
+    doc.write(`
       <!doctype html>
       <html>
         <head>
@@ -176,11 +190,23 @@ export const HR: React.FC = () => {
         </head>
         <body>
           ${bodyHtml}
-          ${autoPrint ? `<script>window.onload = () => { window.focus(); window.print(); };</script>` : ''}
         </body>
       </html>
     `);
-    w.document.close();
+    doc.close();
+
+    // Print after iframe loads
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        // cleanup shortly after print dialog opens
+        window.setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+      }
+    };
   };
 
   const printPayslip = (staff: Staff, asPdf: boolean) => {
@@ -238,7 +264,7 @@ export const HR: React.FC = () => {
 
     const safeName = (staff.name || staff.id || 'payslip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
     const title = `${safeName}_payslip_${payrollMonth}${asPdf ? '_PDF' : ''}`;
-    openPrintWindow(title, html, true);
+    openPrintIframe(title, html);
   };
 
   return (
