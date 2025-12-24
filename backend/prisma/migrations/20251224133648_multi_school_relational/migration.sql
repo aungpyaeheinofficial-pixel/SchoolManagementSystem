@@ -15,6 +15,10 @@ CREATE TABLE "School" (
     "updatedAt" DATETIME NOT NULL
 );
 
+-- Seed a default school so existing rows can be migrated (multi-school backfill)
+INSERT INTO "School" ("id", "name", "slug", "updatedAt")
+VALUES ('school_default', 'Default School', 'default-school', CURRENT_TIMESTAMP);
+
 -- CreateTable
 CREATE TABLE "Student" (
     "schoolId" TEXT NOT NULL,
@@ -318,7 +322,8 @@ CREATE TABLE "new_Dataset" (
     PRIMARY KEY ("schoolId", "key"),
     CONSTRAINT "Dataset_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-INSERT INTO "new_Dataset" ("createdAt", "data", "key", "updatedAt", "version") SELECT "createdAt", "data", "key", "updatedAt", "version" FROM "Dataset";
+INSERT INTO "new_Dataset" ("schoolId", "createdAt", "data", "key", "updatedAt", "version")
+SELECT 'school_default', "createdAt", "data", "key", "updatedAt", "version" FROM "Dataset";
 DROP TABLE "Dataset";
 ALTER TABLE "new_Dataset" RENAME TO "Dataset";
 CREATE TABLE "new_User" (
@@ -331,7 +336,8 @@ CREATE TABLE "new_User" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "User_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "School" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-INSERT INTO "new_User" ("createdAt", "id", "passwordHash", "role", "updatedAt", "username") SELECT "createdAt", "id", "passwordHash", "role", "updatedAt", "username" FROM "User";
+INSERT INTO "new_User" ("id", "schoolId", "username", "passwordHash", "role", "createdAt", "updatedAt")
+SELECT "id", 'school_default', "username", "passwordHash", "role", "createdAt", "updatedAt" FROM "User";
 DROP TABLE "User";
 ALTER TABLE "new_User" RENAME TO "User";
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
