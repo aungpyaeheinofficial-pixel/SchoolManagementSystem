@@ -29,6 +29,13 @@ interface StaffAttendanceState {
 export const StaffAttendance: React.FC = () => {
   const { staff, staffAttendance: staffAttendanceStore, setStaffAttendance: setStaffAttendanceStore } = useData();
 
+  const defaultRecord: StaffAttendanceRecord = {
+    status: 'PRESENT',
+    checkIn: '08:00',
+    checkOut: '16:00',
+    remark: '',
+  };
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedDept, setSelectedDept] = useState('All Departments');
   
@@ -76,14 +83,14 @@ export const StaffAttendance: React.FC = () => {
   const handleStatusChange = (id: string, status: StatusType) => {
     setAttendance(prev => ({
       ...prev,
-      [id]: { ...prev[id], status }
+      [id]: { ...(prev[id] ?? defaultRecord), status }
     }));
   };
 
   const handleTimeChange = (id: string, field: 'checkIn' | 'checkOut', value: string) => {
     setAttendance(prev => ({
       ...prev,
-      [id]: { ...prev[id], [field]: value }
+      [id]: { ...(prev[id] ?? defaultRecord), [field]: value }
     }));
   };
 
@@ -220,7 +227,7 @@ export const StaffAttendance: React.FC = () => {
                </thead>
                <tbody className="divide-y divide-slate-50">
                   {filteredStaff.map((staff) => {
-                     const record = attendance[staff.id];
+                     const record = attendance[staff.id] ?? defaultRecord;
                      
                      return (
                         <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
