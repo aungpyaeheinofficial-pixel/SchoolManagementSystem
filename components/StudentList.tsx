@@ -613,7 +613,7 @@ export const StudentList: React.FC<StudentListProps> = ({ onNavigate }) => {
                   <td className="px-8 py-5 whitespace-nowrap">
                     <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-sm font-bold mr-4 border border-brand-200">
-                            {student.nameEn.charAt(0)}
+                            {(student.nameEn || student.nameMm || student.id || '?').charAt(0)}
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-bold text-slate-800">{student.nameEn}</span>
