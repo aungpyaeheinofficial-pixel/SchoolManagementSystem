@@ -678,11 +678,11 @@ export const ExamReportCards: React.FC = () => {
     }));
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-        <div className="bg-white rounded-[24px] w-full max-w-4xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-3 md:p-6 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+        <div className="bg-white rounded-[28px] w-full max-w-5xl md:max-w-6xl shadow-2xl relative overflow-hidden flex flex-col border border-slate-200 max-h-[92vh] md:max-h-[90vh]">
           
           {/* Modal Header Actions */}
-          <div className="sticky top-0 z-10 p-4 bg-slate-50 border-b border-slate-200 print:hidden relative pr-14">
+          <div className="sticky top-0 z-10 p-4 md:p-5 bg-slate-50 border-b border-slate-200 print:hidden relative pr-14">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="font-bold text-slate-700 text-sm sm:text-base min-w-0 truncate">
                 Report Card Preview
@@ -717,7 +717,7 @@ export const ExamReportCards: React.FC = () => {
           </div>
 
           {/* Printable Content Area */}
-          <div className="p-8 md:p-12 overflow-y-auto print:p-0 print:overflow-visible" id="printable-area">
+          <div className="p-6 md:p-10 overflow-y-auto print:p-0 print:overflow-visible" id="printable-area">
             
             {/* School Header */}
             <div className="text-center mb-8 border-b-2 border-brand-100 pb-6">
