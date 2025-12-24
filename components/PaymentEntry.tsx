@@ -22,6 +22,12 @@ export const PaymentEntry: React.FC = () => {
   const [remark, setRemark] = useState('');
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0); // Input amount (for change calc)
+  const [lastReceipt, setLastReceipt] = useState<{
+    receiptNo: string;
+    createdAt: string; // ISO
+    payment: Payment;
+    studentSnapshot: Student;
+  } | null>(null);
 
   // --- Derived Data ---
 
@@ -80,6 +86,7 @@ export const PaymentEntry: React.FC = () => {
 
     const now = new Date();
     const date = now.toISOString().slice(0, 10);
+    const receiptNo = `RCP-${Date.now().toString().slice(-6)}`;
 
     const selectedFees = applicableFees.filter((f) => selectedFeeIds.includes(f.id));
     const subtotal = selectedFees.reduce((sum, f) => sum + f.amount, 0);
@@ -106,6 +113,12 @@ export const PaymentEntry: React.FC = () => {
     };
 
     addPayment(payment);
+    setLastReceipt({
+      receiptNo,
+      createdAt: now.toISOString(),
+      payment,
+      studentSnapshot: selectedStudent,
+    });
 
     // Update student fee status (simple: reduce pending by paid total)
     const nextPending = Math.max(0, (selectedStudent.feesPending || 0) - totalAmount);
@@ -125,7 +138,141 @@ export const PaymentEntry: React.FC = () => {
     setRemark('');
     setDiscount(0);
     setPaidAmount(0);
+    setLastReceipt(null);
     setStep('SEARCH');
+  };
+
+  const openPrintIframe = (title: string, bodyHtml: string) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      alert('Unable to open print preview.');
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${title}</title>
+          <style>
+            :root { color-scheme: light; }
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Myanmar", "Noto Sans", sans-serif; margin: 0; padding: 24px; color: #0f172a; }
+            .paper { max-width: 820px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; }
+            .header { padding: 20px 22px; background: #7c3aed; color: white; }
+            .title { font-size: 20px; font-weight: 900; margin: 0; }
+            .sub { opacity: .9; margin: 4px 0 0; }
+            .content { padding: 22px; }
+            .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .box { border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; background: #f8fafc; }
+            .row { display:flex; justify-content:space-between; align-items:center; gap: 10px; font-size: 14px; }
+            .label { color:#64748b; font-weight:800; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+            table { width:100%; border-collapse: collapse; margin-top: 14px; }
+            th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            th { text-align:left; color:#64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+            .right { text-align:right; }
+            .totals { margin-top: 14px; display:flex; justify-content:flex-end; }
+            .totals .box { width: 320px; background: white; }
+            .big { font-size: 20px; font-weight: 900; color:#7c3aed; }
+            @media print {
+              body { padding: 0; }
+              .paper { border: none; border-radius: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          ${bodyHtml}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        window.setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+      }
+    };
+  };
+
+  const handlePrintReceipt = () => {
+    if (!lastReceipt) return;
+    const { receiptNo, payment, studentSnapshot } = lastReceipt;
+
+    const subtotal = (payment.items || []).reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+    const discountAmt = Number(payment.discount) || 0;
+    const total = Number(payment.totalAmount) || Math.max(0, subtotal - discountAmt);
+
+    const html = `
+      <div class="paper">
+        <div class="header">
+          <h1 class="title">Payment Receipt</h1>
+          <p class="sub">${receiptNo} • ${payment.date}</p>
+        </div>
+        <div class="content">
+          <div class="grid">
+            <div class="box">
+              <div class="label">Student</div>
+              <div class="row"><span>Name</span><strong>${studentSnapshot.nameEn || ''}</strong></div>
+              <div class="row"><span>ID</span><strong>${studentSnapshot.id || ''}</strong></div>
+              <div class="row"><span>Class</span><strong>${studentSnapshot.grade || ''}</strong></div>
+            </div>
+            <div class="box">
+              <div class="label">Payment</div>
+              <div class="row"><span>Method</span><strong>${payment.paymentMethod}</strong></div>
+              <div class="row"><span>Payer</span><strong>${payment.payerName || ''}</strong></div>
+              <div class="row"><span>Remark</span><strong>${payment.remark || '-'}</strong></div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:60px;">No</th>
+                <th>Description</th>
+                <th class="right" style="width:160px;">Amount (MMK)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(payment.items || [])
+                .map(
+                  (it) =>
+                    `<tr><td>${it.lineNo}</td><td>${it.description || ''}</td><td class="right">${Number(it.amount || 0).toLocaleString()}</td></tr>`
+                )
+                .join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="box">
+              <div class="row"><span>Subtotal</span><strong>${subtotal.toLocaleString()}</strong></div>
+              <div class="row"><span>Discount</span><strong>-${discountAmt.toLocaleString()}</strong></div>
+              <div class="row" style="margin-top:8px;"><span>Total Paid</span><span class="big">${total.toLocaleString()} MMK</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const safe = (receiptNo || 'receipt').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
+    openPrintIframe(`${safe}`, html);
   };
 
   // --- Render Steps ---
@@ -352,11 +499,11 @@ export const PaymentEntry: React.FC = () => {
              <div className="space-y-4">
                 <div className="flex justify-between text-sm">
                    <span className="text-slate-500">Receipt No</span>
-                   <span className="font-mono font-bold text-slate-700">RCP-{Date.now().toString().slice(-6)}</span>
+                   <span className="font-mono font-bold text-slate-700">{lastReceipt?.receiptNo || '-'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                    <span className="text-slate-500">Date</span>
-                   <span className="font-bold text-slate-700">{new Date().toLocaleDateString()}</span>
+                   <span className="font-bold text-slate-700">{lastReceipt?.payment?.date || new Date().toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                    <span className="text-slate-500">Student</span>
@@ -373,7 +520,10 @@ export const PaymentEntry: React.FC = () => {
           </div>
 
           <div className="flex gap-3">
-             <button className="flex-1 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-slate-50 flex items-center justify-center gap-2">
+             <button
+               onClick={handlePrintReceipt}
+               className="flex-1 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-slate-50 flex items-center justify-center gap-2"
+             >
                 <Printer size={18} /> Print
              </button>
              <button 
