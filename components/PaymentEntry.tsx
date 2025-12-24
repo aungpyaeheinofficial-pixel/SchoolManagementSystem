@@ -7,7 +7,7 @@ import {
 import { useData } from '../contexts/DataContext';
 
 export const PaymentEntry: React.FC = () => {
-  const { students, feeStructures, addPayment, updateStudent } = useData();
+  const { students, feeStructures, addPayment, updateStudent, payments } = useData();
 
   // Steps: 'SEARCH' -> 'FEES' -> 'RECEIPT'
   const [step, setStep] = useState<'SEARCH' | 'FEES' | 'RECEIPT'>('SEARCH');
@@ -30,6 +30,35 @@ export const PaymentEntry: React.FC = () => {
   } | null>(null);
 
   // --- Derived Data ---
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const studentById = useMemo(() => {
+    const map = new Map<string, Student>();
+    students.forEach((s) => map.set(s.id, s));
+    return map;
+  }, [students]);
+
+  const recentPayments = useMemo(() => {
+    const list = [...(payments || [])];
+    list.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    return list.slice(0, 12);
+  }, [payments]);
+
+  const paidStudentsToday = useMemo(() => {
+    // prefer student.lastPaymentDate when available (fast and per-student), fallback to payments list
+    const paidIds = new Set<string>();
+    students.forEach((s) => {
+      if (s.lastPaymentDate === todayISO) paidIds.add(s.id);
+    });
+    (payments || []).forEach((p) => {
+      if (p?.studentId && p.date === todayISO) paidIds.add(p.studentId);
+    });
+    const rows = Array.from(paidIds)
+      .map((id) => studentById.get(id))
+      .filter(Boolean) as Student[];
+    rows.sort((a, b) => String(a.grade || '').localeCompare(String(b.grade || '')) || String(a.nameEn || '').localeCompare(String(b.nameEn || '')));
+    return rows;
+  }, [students, payments, todayISO, studentById]);
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -275,6 +304,66 @@ export const PaymentEntry: React.FC = () => {
     openPrintIframe(`${safe}`, html);
   };
 
+  const printPayment = (receiptNo: string, payment: Payment, student: Student) => {
+    const subtotal = (payment.items || []).reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+    const discountAmt = Number(payment.discount) || 0;
+    const total = Number(payment.totalAmount) || Math.max(0, subtotal - discountAmt);
+
+    const html = `
+      <div class="paper">
+        <div class="header">
+          <h1 class="title">Payment Receipt</h1>
+          <p class="sub">${receiptNo} • ${payment.date || ''}</p>
+        </div>
+        <div class="content">
+          <div class="grid">
+            <div class="box">
+              <div class="label">Student</div>
+              <div class="row"><span>Name</span><strong>${student.nameEn || ''}</strong></div>
+              <div class="row"><span>ID</span><strong>${student.id || ''}</strong></div>
+              <div class="row"><span>Class</span><strong>${student.grade || ''}</strong></div>
+            </div>
+            <div class="box">
+              <div class="label">Payment</div>
+              <div class="row"><span>Method</span><strong>${payment.paymentMethod}</strong></div>
+              <div class="row"><span>Payer</span><strong>${payment.payerName || ''}</strong></div>
+              <div class="row"><span>Remark</span><strong>${payment.remark || '-'}</strong></div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:60px;">No</th>
+                <th>Description</th>
+                <th class="right" style="width:160px;">Amount (MMK)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(payment.items || [])
+                .map(
+                  (it) =>
+                    `<tr><td>${it.lineNo}</td><td>${it.description || ''}</td><td class="right">${Number(it.amount || 0).toLocaleString()}</td></tr>`
+                )
+                .join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="box">
+              <div class="row"><span>Subtotal</span><strong>${subtotal.toLocaleString()}</strong></div>
+              <div class="row"><span>Discount</span><strong>-${discountAmt.toLocaleString()}</strong></div>
+              <div class="row" style="margin-top:8px;"><span>Total Paid</span><span class="big">${total.toLocaleString()} MMK</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const safe = (receiptNo || 'receipt').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
+    openPrintIframe(`${safe}`, html);
+  };
+
   // --- Render Steps ---
 
   const renderSearchStep = () => (
@@ -305,6 +394,11 @@ export const PaymentEntry: React.FC = () => {
              <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-[24px] shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
                 <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
                    {searchResults.map(student => (
+                      (() => {
+                        const isPaidToday =
+                          student.lastPaymentDate === todayISO ||
+                          (payments || []).some((p) => p.studentId === student.id && p.date === todayISO);
+                        return (
                       <button 
                         key={student.id}
                         onClick={() => handleSelectStudent(student)}
@@ -317,10 +411,19 @@ export const PaymentEntry: React.FC = () => {
                             <h4 className="font-bold text-slate-800">{student.nameEn}</h4>
                             <p className="text-sm text-slate-500">{student.grade} • {student.id}</p>
                          </div>
+                         {isPaidToday && (
+                           <div className="ml-auto">
+                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-100">
+                               <CheckCircle2 size={14} /> Paid today
+                             </span>
+                           </div>
+                         )}
                          <div className="ml-auto">
                             <ChevronRight size={20} className="text-slate-300 group-hover:text-brand-500" />
                          </div>
                       </button>
+                        );
+                      })()
                    ))}
                 </div>
              </div>
@@ -335,6 +438,76 @@ export const PaymentEntry: React.FC = () => {
              <p>No students found matching "{searchTerm}"</p>
           </div>
        )}
+
+       {/* Paid students + recent payments */}
+       <div className="mt-10 grid grid-cols-1 gap-6">
+         <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+             <div>
+               <h3 className="font-bold text-slate-800">Paid Students (Today)</h3>
+               <p className="text-xs text-slate-500">Shows students who have a payment recorded on {todayISO}</p>
+             </div>
+             <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">{paidStudentsToday.length}</span>
+           </div>
+           <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-50">
+             {paidStudentsToday.length === 0 ? (
+               <div className="p-6 text-sm text-slate-500">No payments recorded today yet.</div>
+             ) : (
+               paidStudentsToday.map((s) => (
+                 <div key={s.id} className="p-4 flex items-center justify-between">
+                   <div>
+                     <p className="font-bold text-slate-800">{s.nameEn}</p>
+                     <p className="text-xs text-slate-500">{s.grade} • {s.id}</p>
+                   </div>
+                   <span className="text-xs font-bold bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full">Paid</span>
+                 </div>
+               ))
+             )}
+           </div>
+         </div>
+
+         <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+             <div>
+               <h3 className="font-bold text-slate-800">Recent Payments</h3>
+               <p className="text-xs text-slate-500">Reprint receipts anytime</p>
+             </div>
+             <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">{recentPayments.length}</span>
+           </div>
+           <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-50">
+             {recentPayments.length === 0 ? (
+               <div className="p-6 text-sm text-slate-500">No payments yet.</div>
+             ) : (
+               recentPayments.map((p) => {
+                 const stu = p.studentId ? studentById.get(p.studentId) : null;
+                 const receiptNo = `RCP-${String(p.id || '').slice(-6) || '------'}`;
+                 return (
+                   <div key={p.id} className="p-4 flex items-center justify-between gap-4">
+                     <div className="min-w-0">
+                       <p className="font-bold text-slate-800 truncate">{stu?.nameEn || p.payerName || 'Unknown'}</p>
+                       <p className="text-xs text-slate-500 truncate">
+                         {stu?.grade || '-'} • {p.date || '-'} • {p.paymentMethod}
+                       </p>
+                       <p className="text-[11px] text-slate-400 font-mono">{receiptNo}</p>
+                     </div>
+                     <div className="flex items-center gap-2 shrink-0">
+                       <span className="text-sm font-bold text-brand-600">{Number(p.totalAmount || 0).toLocaleString()} MMK</span>
+                       {stu && (
+                         <button
+                           onClick={() => printPayment(receiptNo, p, stu)}
+                           className="px-3 py-2 rounded-xl bg-slate-50 text-slate-600 font-bold text-xs hover:bg-slate-100 flex items-center gap-2"
+                         >
+                           <Printer size={14} /> Print
+                         </button>
+                       )}
+                     </div>
+                   </div>
+                 );
+               })
+             )}
+           </div>
+         </div>
+       </div>
     </div>
   );
 
