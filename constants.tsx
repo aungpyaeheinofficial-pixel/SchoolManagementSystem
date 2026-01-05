@@ -543,20 +543,6 @@ export const NAV_ITEMS: NavItem[] = [
     ]
   },
 
-  // Exams & Results Group
-  {
-    id: 'EXAM_GROUP',
-    labelEn: 'Exams & Results',
-    labelMm: 'စာမေးပွဲနှင့်ရလဒ်',
-    icon: ClipboardList,
-    children: [
-      { id: 'EXAM_MANAGEMENT', labelEn: 'Exam Management', labelMm: 'စာမေးပွဲစီမံခန့်ခွဲမှု', icon: FileText },
-      { id: 'EXAM_MARKS_ENTRY', labelEn: 'Mark Entry', labelMm: 'အမှတ်ထည့်သွင်းခြင်း', icon: PenTool },
-      { id: 'EXAM_REPORT_CARDS', labelEn: 'Report Cards', labelMm: 'အမှတ်စာရင်းကတ်', icon: ScrollText },
-      { id: 'EXAM_ANALYTICS', labelEn: 'Analytics', labelMm: 'ခွဲခြမ်းစိတ်ဖြာမှု', icon: BarChart3 },
-    ]
-  },
-
   { id: 'ATTENDANCE', labelEn: 'Attendance', labelMm: 'တက်ရောက်မှု', icon: CalendarCheck },
   
   // Finance Group (New Structure)
@@ -573,30 +559,6 @@ export const NAV_ITEMS: NavItem[] = [
     ]
   },
 
-  { 
-    id: 'HR_GROUP', 
-    labelEn: 'HR & Payroll', 
-    labelMm: 'ဝန်ထမ်းရေးရာ', 
-    icon: Briefcase,
-    children: [
-      { id: 'HR', labelEn: 'Staff List & Payroll', labelMm: 'လစာနှင့်ဝန်ထမ်းစာရင်း', icon: UserCog },
-      { id: 'HR_ATTENDANCE', labelEn: 'Staff Attendance', labelMm: 'ဝန်ထမ်းတက်ရောက်မှု', icon: Clock },
-    ]
-  },
-
-  // Reports Group
-  {
-    id: 'REPORTS_GROUP',
-    labelEn: 'Reports',
-    labelMm: 'အစီရင်ခံစာများ',
-    icon: BarChart3,
-    children: [
-      { id: 'REPORTS_STUDENTS', labelEn: 'Student Reports', labelMm: 'ကျောင်းသားအစီရင်ခံစာ', icon: GraduationCap },
-      { id: 'REPORTS_FINANCE', labelEn: 'Financial Reports', labelMm: 'ဘဏ္ဍာရေးအစီရင်ခံစာ', icon: Wallet },
-      { id: 'REPORTS_ATTENDANCE', labelEn: 'Attendance Reports', labelMm: 'တက်ရောက်မှုအစီရင်ခံစာ', icon: CalendarCheck },
-      { id: 'REPORTS_ACADEMIC', labelEn: 'Academic Reports', labelMm: 'ပညာရေးအစီရင်ခံစာ', icon: TrendingUp },
-    ]
-  },
 
   // Settings
   { id: 'SETTINGS', labelEn: 'Settings', labelMm: 'ဆက်တင်များ', icon: Settings },

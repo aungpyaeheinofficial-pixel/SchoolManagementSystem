@@ -25,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const normalizedRole = normalizeRole(role);
   // State to track expanded parent groups
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['HR_GROUP', 'ACADEMIC_GROUP', 'FINANCE_GROUP']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['ACADEMIC_GROUP', 'FINANCE_GROUP']);
   // State to track active popover
   const [activePopover, setActivePopover] = useState<string | null>(null);
   // Popover position state for smart positioning
