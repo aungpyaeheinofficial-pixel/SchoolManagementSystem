@@ -27,8 +27,8 @@ import {
   Settings
 } from 'lucide-react';
 
-export const APP_NAME_EN = "Pyin Nyar Nan Daw";
-export const APP_NAME_MM = "ပညာနန်းတော်";
+export const APP_NAME_EN = "A7 smart School Managemnet";
+export const APP_NAME_MM = "A7 smart School Managemnet";
 
 export const GRADE_LEVELS_LIST = [
   "KG (သူငယ်တန်း)",

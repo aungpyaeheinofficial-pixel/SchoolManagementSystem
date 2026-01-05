@@ -99,8 +99,8 @@ export const Settings: React.FC = () => {
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.schoolInfo);
     return saved ? JSON.parse(saved) : {
-      nameEn: 'Pyin Nyar Nan Daw Private School',
-      nameMm: 'ပညာနန်းတော် ကိုယ်ပိုင်အထက်တန်းကျောင်း',
+      nameEn: 'A7 smart School Managemnet',
+      nameMm: 'A7 smart School Managemnet',
       address: 'No. 123, Pyay Road, Kamayut Township, Yangon, Myanmar',
       phone: '09-123456789',
       email: 'info@pnnd.edu.mm',

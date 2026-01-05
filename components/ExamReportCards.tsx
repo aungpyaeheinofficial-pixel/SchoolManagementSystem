@@ -409,8 +409,8 @@ export const ExamReportCards: React.FC = () => {
         <div class="page">
           <div class="header">
             <div class="logo">📚</div>
-            <div class="school-name">PYIN NYAR NAN DAW PRIVATE SCHOOL</div>
-            <div class="school-name-mm">ပညာနန်းတော် ကိုယ်ပိုင်အထက်တန်းကျောင်း</div>
+            <div class="school-name">A7 SMART SCHOOL MANAGEMNET</div>
+            <div class="school-name-mm">A7 smart School Managemnet</div>
             <div class="school-address">No. 123, Pyay Road, Kamayut Township, Yangon, Myanmar</div>
           </div>
           
@@ -568,8 +568,8 @@ export const ExamReportCards: React.FC = () => {
       return `
         <div class="report-card" style="page-break-after: always; padding: 30px;">
           <div style="text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 15px; margin-bottom: 20px;">
-            <h1 style="font-size: 20px; margin: 0; color: #1e293b;">PYIN NYAR NAN DAW PRIVATE SCHOOL</h1>
-            <p style="color: #7c3aed; margin: 5px 0;">ပညာနန်းတော် ကိုယ်ပိုင်အထက်တန်းကျောင်း</p>
+            <h1 style="font-size: 20px; margin: 0; color: #1e293b;">A7 SMART SCHOOL MANAGEMNET</h1>
+            <p style="color: #7c3aed; margin: 5px 0;">A7 smart School Managemnet</p>
             <p style="font-size: 11px; color: #64748b;">Student Report Card - ${selectedExam?.name || ''}</p>
           </div>
           
@@ -726,8 +726,8 @@ export const ExamReportCards: React.FC = () => {
                     <GraduationCap size={32} />
                  </div>
                </div>
-               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">PYIN NYAR NAN DAW PRIVATE SCHOOL</h1>
-               <p className="text-slate-500 font-burmese font-bold mt-1">ပညာနန်းတော် ကိုယ်ပိုင်အထက်တန်းကျောင်း</p>
+               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">A7 SMART SCHOOL MANAGEMNET</h1>
+               <p className="text-slate-500 font-burmese font-bold mt-1">A7 smart School Managemnet</p>
                <p className="text-sm text-slate-400 mt-2">No. 123, Pyay Road, Kamayut Township, Yangon</p>
             </div>
 

@@ -138,8 +138,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br ${currentRole.color} rounded-2xl mb-4 shadow-lg`}>
             <GraduationCap size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Pyin Nyar Nan Daw</h1>
-          <p className="text-slate-500 font-burmese">ပညာနန်းတော်</p>
+          <h1 className="text-2xl font-bold text-slate-800">A7 smart School Managemnet</h1>
+          <p className="text-slate-500 font-burmese">A7 smart School Managemnet</p>
         </div>
       )}
 
@@ -361,8 +361,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white/15 backdrop-blur-xl rounded-3xl mb-5 shadow-2xl border border-white/25">
             <GraduationCap size={40} className="text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Pyin Nyar Nan Daw</h1>
-          <p className="text-white/80 font-burmese mt-2 leading-relaxed text-lg">ပညာနန်းတော်</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">A7 smart School Managemnet</h1>
+          <p className="text-white/80 font-burmese mt-2 leading-relaxed text-lg">A7 smart School Managemnet</p>
 
           {/* Tagline (must be visible on mobile cover) */}
           <div className="mt-6 px-2">
@@ -505,10 +505,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <GraduationCap size={48} className="text-white" />
             </div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white mb-3 tracking-tight">
-              Pyin Nyar Nan Daw
+              A7 smart School Managemnet
             </h1>
             <p className="text-2xl text-white/80 font-burmese leading-relaxed">
-              ပညာနန်းတော်
+              A7 smart School Managemnet
             </p>
           </div>
 
