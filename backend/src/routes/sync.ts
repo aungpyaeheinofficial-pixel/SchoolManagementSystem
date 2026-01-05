@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../prisma.js';
+import { prisma, basePrismaClient } from '../prisma.js';
 import { env } from '../env.js';
 import { requireAuth } from '../middleware/auth.js';
 import { exportDatasetForSchool, importDatasetForSchool } from '../services/datasetService.js';
@@ -15,7 +15,8 @@ syncRouter.get('/pull', requireAuth, async (req, res) => {
     where: { schoolId_key: { schoolId, key: env.DATASET_KEY } },
   });
 
-  const data = await exportDatasetForSchool(prisma, schoolId);
+  // Use basePrismaClient for bulk operations that explicitly manage schoolId
+  const data = await exportDatasetForSchool(basePrismaClient, schoolId);
 
   return res.json({
     key: env.DATASET_KEY,
@@ -54,8 +55,8 @@ syncRouter.post('/push', requireAuth, async (req, res) => {
   const nextVersion = (existing?.version ?? 0) + 1;
   const jsonData = data as Prisma.InputJsonValue;
 
-  // Write relational tables + keep a JSON snapshot for versioning/backup
-  await importDatasetForSchool(prisma, schoolId, data as any);
+  // Use basePrismaClient for bulk operations that explicitly manage schoolId
+  await importDatasetForSchool(basePrismaClient, schoolId, data as any);
 
   const updated = await prisma.dataset.upsert({
     where: { schoolId_key: { schoolId, key: env.DATASET_KEY } },
